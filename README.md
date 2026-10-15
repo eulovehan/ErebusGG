@@ -49,4 +49,6 @@ VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행�
 
 설정 파일: `%LOCALAPPDATA%/EternalGG/settings.json`. `SelectionRegions`와 `GameRegions`의 좌표는 게임 클라이언트 영역 대비 0~1 비율이다. 파일을 변경한 뒤 앱을 재실행한다.
 
+최신 Neutral 디자인 EXE는 `artifacts/win-x64-neutral/EternalGG.exe`에 별도 생성했다. 디자인 결정과 컴퓨터 유즈 없는 검증 기록은 `docs/design-neutral.md`를 참고한다.
+
 설계·출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
