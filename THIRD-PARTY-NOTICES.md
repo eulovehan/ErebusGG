@@ -7,6 +7,7 @@ This distribution includes third-party software. Full license texts are distribu
 | .NET runtime and WPF | https://github.com/dotnet | MIT and .NET third-party notices |
 | CommunityToolkit.Mvvm 8.4.0 | https://github.com/CommunityToolkit/dotnet | MIT |
 | Tesseract .NET 5.2.0 | https://github.com/charlesw/tesseract | Apache-2.0 |
+| InteropDotNet (included in Tesseract .NET) | https://github.com/AndreyAkinshin/InteropDotNet | MIT; copyright 2014 Andrey Akinshin |
 | Tesseract OCR | https://github.com/tesseract-ocr/tesseract | Apache-2.0 |
 | Leptonica | http://www.leptonica.org/about-the-license.html | BSD-style |
 | Korean and English tessdata_fast models | https://github.com/tesseract-ocr/tessdata_fast | Apache-2.0 |

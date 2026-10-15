@@ -6,6 +6,8 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 `artifacts/win-x64/EternalGG.exe`를 실행한다. 런타임을 포함한 폴더 배포본이므로 DLL·x64·tessdata 폴더를 함께 유지한다. Windows 10·11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
+.NET 런타임은 포함되어 있지만 Tesseract 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 공식 의존성 안내](https://github.com/charlesw/tesseract#dependencies).
+
 1. 앱을 먼저 실행한다.
 2. 이터널리턴에서 매칭을 시작한다.
 3. 캐릭터 선택·루트 선택 화면을 전경으로 유지한다.
