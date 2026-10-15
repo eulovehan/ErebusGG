@@ -34,7 +34,7 @@ SDK는 `global.json`의 버전으로 고정한다. 프로젝트 전용 SDK는 `.
 
 코드 또는 중앙 패키지 버전을 바꿔 의존성 잠금 갱신이 필요할 때만 `dotnet restore --force-evaluate`를 사용하고 잠금 파일 변경을 검토한다. 일반 빌드는 `--locked-mode`를 사용한다.
 
-VS Code에서 폴더를 열고 제공된 Build/Test/Publish 작업을 실행할 수 있다. Visual Studio에서는 `EternalGG.sln`을 연다.
+VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행한다. 프로젝트 전용 SDK 환경으로 편집기를 열며, 터미널에서는 `.\open-vscode.ps1`도 사용할 수 있다. 다른 경로로 프로젝트를 옮기거나 새로 받은 경우 먼저 `.\bootstrap.ps1`을 실행한다. 제공된 Build/Test/Publish 작업을 사용할 수 있다. Visual Studio에서는 `EternalGG.sln`을 연다.
 
 ## 검증 범위와 제한
 

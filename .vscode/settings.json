@@ -1,0 +1,21 @@
+{
+  "dotnet.defaultSolution": "EternalGG.sln",
+  "terminal.integrated.env.windows": {
+    "DOTNET_ROOT": "${workspaceFolder}\\.tools\\dotnet",
+    "PATH": "${workspaceFolder}\\.tools\\dotnet;${env:PATH}",
+    "NUGET_PACKAGES": "${workspaceFolder}\\.tools\\nuget",
+    "DOTNET_CLI_HOME": "${workspaceFolder}\\.tools\\cli"
+  },
+  "files.watcherExclude": {
+    "**/.tools/**": true,
+    "**/artifacts/**": true,
+    "**/bin/**": true,
+    "**/obj/**": true
+  },
+  "search.exclude": {
+    "**/.tools": true,
+    "**/artifacts": true,
+    "**/bin": true,
+    "**/obj": true
+  }
+}
