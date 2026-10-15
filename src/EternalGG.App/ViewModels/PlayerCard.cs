@@ -3,6 +3,7 @@ using EternalGG.Core;
 
 namespace EternalGG.App.ViewModels;
 
+/** 플레이어별 이름과 전적 표시 상태 */
 public partial class PlayerCard : ObservableObject
 {
     [ObservableProperty] private string nickname = "";
@@ -16,6 +17,7 @@ public partial class PlayerCard : ObservableObject
     public string Label { get; init; } = "ALLY";
     public bool HasName => !string.IsNullOrWhiteSpace(Nickname);
 
+    /** 닉네임 변경에 따른 기존 전적 초기화 */
     partial void OnNicknameChanged(string value)
     {
         ClearStats();
@@ -24,12 +26,14 @@ public partial class PlayerCard : ObservableObject
         OnPropertyChanged(nameof(HasName));
     }
 
+    /** 전적 수치와 최근 경기 표시 초기화 */
     public void ClearStats()
     {
         Mmr = Games = WinRate = AverageRank = "—";
         Recent = "공식 API로 확인한 전적만 표시합니다";
     }
 
+    /** 공식 조회 결과의 카드 표시 반영 */
     public void Apply(LookupResult result)
     {
         Status = result.Message;

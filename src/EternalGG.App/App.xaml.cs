@@ -2,8 +2,10 @@ using System.Windows;
 
 namespace EternalGG.App;
 
+/** 앱 시작과 예외 안내 */
 public partial class App : Application
 {
+    /** 미처리 화면 예외의 안내 및 앱 시작 */
     protected override void OnStartup(StartupEventArgs e)
     {
         DispatcherUnhandledException += (_, args) =>

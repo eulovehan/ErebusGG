@@ -2,8 +2,10 @@ using System.Text.RegularExpressions;
 
 namespace EternalGG.Core;
 
+/** 매칭 진행 단계 */
 public enum MatchPhase { Offline, Lobby, Queuing, Matched, Loading, InGame, Finished }
 
+/** 로그 기반 매칭 상태 */
 public sealed partial class MatchState
 {
     public MatchPhase Phase { get; private set; } = MatchPhase.Lobby;
@@ -11,9 +13,12 @@ public sealed partial class MatchState
     public int Generation { get; private set; }
     public string Mode { get; private set; } = "모드 확인 중";
 
+    /** 로그 한 줄의 상태 변경 반영 */
     public bool Apply(string line)
     {
         var before = (Phase, IsAi, Mode, Generation);
+
+        /** 대전 모드 판별 및 AI 선택 화면 진입 */
         if (line.Contains("GlobalUserData:SetMatchingMode", StringComparison.Ordinal))
         {
             if (line.Contains("Invoked: Test", StringComparison.Ordinal))
@@ -27,6 +32,7 @@ public sealed partial class MatchState
             else if (line.Contains("Invoked: Rank", StringComparison.Ordinal)) { IsAi = false; Mode = "랭크 대전"; }
         }
 
+        /** 매칭 알림과 화면 전환별 단계 갱신 */
         if (line.Contains("matchingNotification : StartMatching", StringComparison.Ordinal))
         {
             Phase = MatchPhase.Queuing;
@@ -48,6 +54,7 @@ public sealed partial class MatchState
         return before != (Phase, IsAi, Mode, Generation);
     }
 
+    /** 게임 종료 후 매칭 상태 초기화 */
     public void Reset()
     {
         Phase = MatchPhase.Lobby;
@@ -56,14 +63,18 @@ public sealed partial class MatchState
         Generation++;
     }
 
+    /** 과거 로그의 진행 단계 제외 */
     public void IgnoreHistoricalPhase() => Phase = MatchPhase.Lobby;
 }
 
+/** 닉네임 인식 결과 검증 */
 public static partial class NicknameRules
 {
+    /** 닉네임 허용 문자와 길이 */
     [GeneratedRegex(@"^[\p{L}\p{N}_]{2,24}$")]
     private static partial Regex ValidName();
 
+    /** 인식 공백 제거 및 화면 문구 제외 */
     public static string? Normalize(string raw)
     {
         var value = raw.Trim().Replace(" ", "");

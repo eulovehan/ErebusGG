@@ -6,35 +6,44 @@ using EternalGG.App.ViewModels;
 
 namespace EternalGG.App;
 
+/** 메인 창 이벤트와 화면 연결 */
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
+    /** 화면 초기화 및 상태 갱신 타이머 연결 */
     public MainWindow()
     {
         InitializeComponent();
         SourceInitialized += (_, _) => LimitPhysicalSize();
         DpiChanged += (_, _) => LimitPhysicalSize();
         DataContext = viewModel;
+
+        /** 설정 표시 시 입력 영역으로 이동 */
         viewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(MainViewModel.SettingsOpen) && viewModel.SettingsOpen)
                 Dispatcher.InvokeAsync(() => SettingsPanel.BringIntoView());
         };
+
+        /** 주기 갱신 시작 및 창 종료 시 자원 정리 */
         timer.Tick += async (_, _) => await viewModel.TickAsync();
         Loaded += async (_, _) => { await viewModel.TickAsync(); timer.Start(); };
         Closed += (_, _) => { timer.Stop(); viewModel.Dispose(); };
     }
 
+    /** 입력한 API 키의 메모리 상태 반영 */
     private void ApiKeyChanged(object sender, RoutedEventArgs e) => viewModel.ApiKey = ((PasswordBox)sender).Password;
 
+    /** 직접 검색용 닉네임 입력란 이동 */
     private void SearchClick(object sender, RoutedEventArgs e)
     {
         viewModel.SettingsOpen = false;
         FindNameInput(this)?.Focus();
     }
 
+    /** 화면 트리의 첫 닉네임 입력란 탐색 */
     private static TextBox? FindNameInput(DependencyObject parent)
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -47,6 +56,7 @@ public partial class MainWindow : Window
         return null;
     }
 
+    /** 화면 배율별 물리 창 크기의 최대 1248픽셀 제한 */
     private void LimitPhysicalSize()
     {
         var dpi = VisualTreeHelper.GetDpi(this);

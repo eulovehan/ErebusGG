@@ -10,6 +10,7 @@ using Tesseract;
 
 namespace EternalGG.App.ViewModels;
 
+/** 매칭 감지와 이름 인식의 화면 상태 관리 */
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     public AppSettings Settings { get; } = AppSettings.Load();
@@ -29,6 +30,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool wasRunning;
     private bool initial = true;
 
+    /** 화면 바인딩용 연결 상태와 사용자 입력 */
     [ObservableProperty] private string gameStatus = "게임 연결 확인 중";
     [ObservableProperty] private string phaseTitle = "다음 매칭을 기다리는 중";
     [ObservableProperty] private string phaseDetail = "게임과 연결되면 팀원 이름을 자동으로 확인합니다.";
@@ -50,6 +52,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string SelfNickname { get => Settings.SelfNickname; set { Settings.SelfNickname = value.Trim(); OnPropertyChanged(); } }
     public string LogPath { get => Settings.LogPath; set { Settings.LogPath = value; OnPropertyChanged(); } }
 
+    /** 저장 설정 복원 및 초기 화면 준비 */
     public MainViewModel()
     {
         SelfNickname = Settings.SelfNickname;
@@ -59,18 +62,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AddEvent("EternalGG 시작 · 로컬 인식 / 실제 전적만 표시");
     }
 
+    /** API 키 변경 안내 갱신 */
     partial void OnApiKeyChanged(string value)
     {
         OnPropertyChanged(nameof(ApiStatus));
         OnPropertyChanged(nameof(ApiBanner));
     }
 
+    /** 연결 설정 표시 전환 */
     [RelayCommand]
     private void ToggleSettings() => SettingsOpen = !SettingsOpen;
 
+    /** 사용 가이드 표시 전환 */
     [RelayCommand]
     private void ToggleHelp() => HelpOpen = !HelpOpen;
 
+    /** API 키를 제외한 사용자 설정 저장 */
     [RelayCommand]
     private void SaveSettings()
     {
@@ -82,6 +89,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AddEvent("설정 저장 · 자동 감지 " + (AutoDetect ? "켜짐" : "꺼짐"));
     }
 
+    /** 수동 이름 재인식 구간 시작 */
     [RelayCommand]
     private void Recognize()
     {
@@ -91,9 +99,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AddEvent("40초 동안 이름 확인 · 게임을 전경으로 전환해 주세요");
     }
 
+    /** 현재 팀의 공식 전적 조회 */
     [RelayCommand]
     private async Task LookupAsync()
     {
+        /** API 키 누락 시 조회 차단 및 설정 안내 */
         if (string.IsNullOrWhiteSpace(ApiKey))
         {
             foreach (var card in Players.Where(p => p.HasName)) { card.ClearStats(); card.Status = "API 키 미설정 · 전적 조회 대기"; }
@@ -102,6 +112,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        /** 조회 시즌 입력 검증 */
         if (!int.TryParse(SeasonInput, out var season) || season < 1)
         {
             SettingsOpen = true;
@@ -110,6 +121,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         var generation = Match.Generation;
+
+        /** 이전 매칭의 비동기 조회 결과 반영 방지 */
         var api = new EternalReturnApi(http);
         foreach (var card in Players.Where(p => p.HasName))
         {
@@ -124,6 +137,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AddEvent("전적 조회 처리 완료 · " + LastUpdated);
     }
 
+    /** 게임 연결과 로그 및 인식 상태의 주기 갱신 */
     public async Task TickAsync()
     {
         if (ticking || disposed) return;
@@ -132,6 +146,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var running = GameCapture.FindGame() != 0;
             GameStatus = running ? "ETERNAL RETURN 연결됨" : "게임 실행 대기";
+
+            /** 게임 종료 시 팀 정보와 감지 상태 정리 */
             if (!running)
             {
                 if (wasRunning) { ClearTeam(); Match.Reset(); captureUntil = DateTime.MinValue; manualCaptureUntil = DateTime.MinValue; logs.Dispose(); initial = true; }
@@ -142,6 +158,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             wasRunning = true;
+
+            /** 최초 연결 시 과거 로그의 상태만 복원 */
             if (initial && File.Exists(LogPath))
             {
                 using var stream = new FileStream(LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -156,6 +174,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 AddEvent("게임 로그 연결 · 과거 매칭 정보는 표시하지 않음");
             }
 
+            /** 새 로그의 매칭 전환과 이름 확인 구간 반영 */
             LogStatus = File.Exists(LogPath) ? "연결됨" : "경로 확인 필요";
             foreach (var line in logs.ReadNew(LogPath))
             {
@@ -179,12 +198,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (Match.Phase == MatchPhase.Lobby) ClearTeam();
             }
 
+            /** 자동 또는 수동 인식 구간의 캡처 간격 제한 */
             RefreshPhase();
             var manual = DateTime.Now < manualCaptureUntil;
             if ((AutoDetect && DateTime.Now < captureUntil || manual) && (DateTime.Now - lastCapture).TotalSeconds >= 1.2)
             {
                 lastCapture = DateTime.Now;
                 var generation = Match.Generation;
+
+                /** 백그라운드 로컬 인식 및 AI 아군 봇 제외 */
                 var candidates = await Task.Run(() =>
                 {
                     using var screenshot = GameCapture.CaptureForeground();
@@ -200,6 +222,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     OcrDiagnostic = ocr.Diagnostics;
                     OcrStatus = candidates.Count == 0 ? "이름 표시 영역 확인 중" : "이름 후보 확인 중";
                     var added = false;
+
+                    /** 연속 두 번 일치한 닉네임만 확정 */
                     foreach (var candidate in candidates)
                     {
                         var previous = votes.GetValueOrDefault(candidate.Slot);
@@ -216,6 +240,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         }
                     }
 
+                    /** 이름 확정 후 전적 조회 및 인식 완료 처리 */
                     if (added && !string.IsNullOrWhiteSpace(ApiKey)) await LookupAsync();
                     var expected = Match.IsAi ? 1 : 3;
                     if (Players.Take(expected).All(p => p.Source.StartsWith("화면 OCR")))
@@ -236,6 +261,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally { ticking = false; }
     }
 
+    /** 매칭 단계별 화면 문구 갱신 */
     private void RefreshPhase()
     {
         ModeLabel = Match.Mode;
@@ -250,6 +276,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         };
     }
 
+    /** 다음 매칭을 위한 팀 정보 초기화 */
     private void ClearTeam()
     {
         captureUntil = manualCaptureUntil = DateTime.MinValue;
@@ -259,12 +286,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         PlayerCount = "0 / 3";
     }
 
+    /** 최근 상태 이벤트의 표시 개수 제한 */
     private void AddEvent(string value)
     {
         Events.Insert(0, DateTime.Now.ToString("HH:mm:ss") + "  " + value);
         while (Events.Count > 8) Events.RemoveAt(Events.Count - 1);
     }
 
+    /** 비동기 작업 취소 및 연결 자원 해제 */
     public void Dispose()
     {
         disposed = true;
