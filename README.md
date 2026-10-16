@@ -4,13 +4,13 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 ## 실행
 
-`artifacts/win-x64/EternalGG.exe`를 실행한다. 런타임을 포함한 폴더 배포본이므로 DLL·x64·tessdata 폴더를 함께 유지한다. Windows 10·11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
+`artifacts/win-x64/EternalGG.exe`를 실행한다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/tessdata 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
 .NET 런타임은 포함되어 있지만 Tesseract 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 공식 의존성 안내](https://github.com/charlesw/tesseract#dependencies).
 
 1. 앱을 먼저 실행한다.
 2. 이터널리턴에서 매칭을 시작한다.
-3. 캐릭터 선택·루트 선택 화면을 전경으로 유지한다.
+3. 캐릭터 선택/루트 선택 화면을 전경으로 유지한다.
 4. 팀원 이름이 두 번 일치하면 카드에 표시한다. AI 대전은 본인 1명만 확인한다.
 5. API 키가 없으면 전적은 `—`, 상태는 `API 키 미설정`으로 표시한다.
 
@@ -18,10 +18,10 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 - `Ctrl+R`: 40초 동안 이름 다시 읽기
 - `Ctrl+Enter`: 전적 조회
-- `Ctrl+,`: 설정 열기·닫기
+- `Ctrl+,`: 설정 열기/닫기
 - 전적 검색: 첫 닉네임 입력란으로 이동
 
-설정에서 본인 닉네임·시즌 ID·조회 모드·로그 경로·자동 감지를 변경한다. API 키는 저장하지 않으며 앱 종료 시 사라진다. 실제 전적 조회에는 유효한 키와 시즌 ID가 필요하다. 테스트 요청에 따라 기본 키는 비워 둔다.
+설정에서 본인 닉네임/시즌 ID/조회 모드/로그 경로/자동 감지를 변경한다. API 키는 저장하지 않으며 앱 종료 시 사라진다. 실제 전적 조회에는 유효한 키와 시즌 ID가 필요하다. 테스트 요청에 따라 기본 키는 비워 둔다.
 
 ## 빌드
 
@@ -39,16 +39,22 @@ VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행�
 ## 검증 범위와 제한
 
 - Windows 11의 실행 중인 실제 게임에서 AI 상대 대전 보통만 사용했다.
-- 일반·랭크 3인 로스터 인식 경로는 구현했지만 실제 PvP 테스트는 수행하지 않았다.
-- API 키가 없어 라이브 전적 응답은 검증하지 않았다. HTTP 고정 응답을 이용한 계약·오류 처리 테스트와 빈 키 무요청 테스트는 별도로 제공한다.
-- OCR 기본 좌표는 한국어 UI·1920×1080·테두리 없는 창모드에서 검증한다. 다른 비율·UI 변경·긴 닉네임은 추가 보정이 필요할 수 있다.
-- 일반 OS 화면 캡처를 사용한다. 전경 게임만 읽으며 캡처 원본을 저장·업로드하지 않는다. 다른 앱이 게임 위를 가리면 인식이 실패할 수 있다.
-- 광고는 빈 자리 표시자다. 광고 SDK·실제 광고·인앱 결제·게임 주입 오버레이는 구현하지 않았다.
+- 일반/랭크 3인 로스터 인식 경로는 구현했지만 실제 PvP 테스트는 수행하지 않았다.
+- API 키가 없어 라이브 전적 응답은 검증하지 않았다. HTTP 고정 응답을 이용한 계약/오류 처리 테스트와 빈 키 무요청 테스트는 별도로 제공한다.
+- OCR 기본 좌표는 한국어 UI/1920×1080/테두리 없는 창모드에서 검증한다. 다른 비율/UI 변경/긴 닉네임은 추가 보정이 필요할 수 있다.
+- 일반 OS 화면 캡처를 사용한다. 전경 게임만 읽으며 캡처 원본을 저장/업로드하지 않는다. 다른 앱이 게임 위를 가리면 인식이 실패할 수 있다.
+- 광고는 빈 자리 표시자다. 광고 SDK/실제 광고/인앱 결제/게임 주입 오버레이는 구현하지 않았다.
 - 개발용 API 직접 호출 클라이언트다. 공용 키를 넣어 배포하기 전에는 중계 서버로 이전한다.
-- 서명·설치 프로그램·자동 업데이트는 후속 배포 작업이다.
+- 서명/설치 프로그램/자동 업데이트는 후속 배포 작업이다.
 
 설정 파일: `%LOCALAPPDATA%/EternalGG/settings.json`. `SelectionRegions`와 `GameRegions`의 좌표는 게임 클라이언트 영역 대비 0~1 비율이다. 파일을 변경한 뒤 앱을 재실행한다.
 
-최신 Neutral 디자인 EXE는 `artifacts/win-x64-neutral/EternalGG.exe`에 별도 생성했다. 디자인 결정과 컴퓨터 유즈 없는 검증 기록은 `docs/design-neutral.md`를 참고한다.
+Neutral 디자인 EXE는 `artifacts/win-x64-neutral/EternalGG.exe`에 별도 생성했다. 디자인 결정과 컴퓨터 유즈 없는 검증 기록은 `docs/design-neutral.md`를 참고한다.
 
-설계·출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
+설계/출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
+
+## 개발 지침
+
+[지침 세트](docs/guidelines/README.md)를 먼저 확인한다. [개발과 주석](docs/guidelines/development.md), [UX](docs/guidelines/ux.md), [심미성 중심 UI](docs/guidelines/ui.md), [기획](docs/guidelines/planning.md), [25개 원문 조사](docs/guidelines/research.md)를 보관한다.
+
+앱 자체 상단 바를 적용한 새 EXE는 artifacts/win-x64-chrome/EternalGG.exe다. [상단 바 검증 기록](docs/custom-titlebar.md)을 참고한다.

@@ -33,6 +33,19 @@ public partial class MainWindow : Window
         Closed += (_, _) => { timer.Stop(); viewModel.Dispose(); };
     }
 
+    /** 창 최소화 */
+    private void MinimizeClick(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    /** 창 최대화와 이전 크기 복원 */
+    private void MaximizeRestoreClick(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized) SystemCommands.RestoreWindow(this);
+        else SystemCommands.MaximizeWindow(this);
+    }
+
+    /** 창 닫기 */
+    private void CloseClick(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+
     /** 입력한 API 키의 메모리 상태 반영 */
     private void ApiKeyChanged(object sender, RoutedEventArgs e) => viewModel.ApiKey = ((PasswordBox)sender).Password;
 

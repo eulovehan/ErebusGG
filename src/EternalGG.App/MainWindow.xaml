@@ -1,173 +1,221 @@
-<Window x:Class="EternalGG.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EternalGG · Eternal Return Companion" Width="1160" Height="910" MaxWidth="1248" MaxHeight="1248" MinWidth="980" MinHeight="760"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
+<Window x:Class="EternalGG.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="EternalGG / Eternal Return Companion" Width="1160" Height="910" MaxWidth="1248" MaxHeight="1248" MinWidth="980" MinHeight="760"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
         FontFamily="Segoe UI, Malgun Gothic" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+  </shell:WindowChrome.WindowChrome>
   <Window.InputBindings>
     <KeyBinding Key="R" Modifiers="Control" Command="{Binding RecognizeCommand}" />
     <KeyBinding Key="OemComma" Modifiers="Control" Command="{Binding ToggleSettingsCommand}" />
     <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding LookupCommand}" />
   </Window.InputBindings>
-  <Grid Background="{StaticResource BackgroundBrush}">
-    <Grid.ColumnDefinitions><ColumnDefinition Width="184" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-    <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-      <Grid Margin="14,24,14,18">
-        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <StackPanel>
-          <StackPanel Orientation="Horizontal" Margin="8,0,0,34">
-            <Border Background="{StaticResource ForegroundBrush}" CornerRadius="7" Width="30" Height="30">
-              <Path Data="M 6,16 L 14,6 M 12,19 L 20,9" Stroke="#111111" StrokeThickness="2.5" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <StackPanel Margin="9,0,0,0"><TextBlock Text="eternalgg" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="MATCH COMPANION" FontSize="8" Foreground="{StaticResource MutedBrush}" /></StackPanel>
+  <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource BackgroundBrush}">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="36" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+      <Border x:Name="TitleBar" Grid.Row="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <TextBlock Text="EternalGG" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="16,0" IsHitTestVisible="False" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="MinimizeClick" ToolTip="최소화" AutomationProperties.Name="창 최소화">
+              <Path Data="M 0,5 L 10,5" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" Width="10" Height="10" />
+            </Button>
+            <Button x:Name="MaximizeRestoreButton" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="MaximizeRestoreClick">
+              <Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+                  <Setter Property="ToolTip" Value="최대화" />
+                  <Setter Property="AutomationProperties.Name" Value="창 최대화" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="Maximized">
+                      <Setter Property="ToolTip" Value="이전 크기로" />
+                      <Setter Property="AutomationProperties.Name" Value="창 이전 크기로 복원" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Button.Style>
+              <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" Width="10" Height="10">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Data" Value="M 0.5,0.5 L 9.5,0.5 L 9.5,9.5 L 0.5,9.5 Z" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="Maximized">
+                        <Setter Property="Data" Value="M 2.5,0.5 L 9.5,0.5 L 9.5,7.5 M 0.5,2.5 L 7.5,2.5 L 7.5,9.5 L 0.5,9.5 Z" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+            <Button x:Name="CloseButton" Style="{StaticResource CloseCaptionButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseClick" ToolTip="닫기" AutomationProperties.Name="창 닫기">
+              <Path Data="M 0.5,0.5 L 9.5,9.5 M 9.5,0.5 L 0.5,9.5" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" Width="10" Height="10" />
+            </Button>
           </StackPanel>
-          <TextBlock Text="워크스페이스" Foreground="{StaticResource SubtleBrush}" FontSize="11" Margin="12,0,0,10" />
-          <Border Background="{StaticResource SecondaryBrush}" CornerRadius="6" Padding="12,11" Margin="0,3">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="현재 매칭" FontWeight="SemiBold" /></StackPanel>
-          </Border>
-          <Button Style="{StaticResource NavButton}" Click="SearchClick" AutomationProperties.Name="전적 검색">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="전적 검색" /></StackPanel>
-          </Button>
-          <Button Style="{StaticResource NavButton}" Command="{Binding ToggleSettingsCommand}" AutomationProperties.Name="연결 설정">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="연결 설정" /></StackPanel>
-          </Button>
-          <Button Style="{StaticResource NavButton}" Command="{Binding ToggleHelpCommand}" AutomationProperties.Name="사용 가이드">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="사용 가이드" /></StackPanel>
-          </Button>
-        </StackPanel>
-        <StackPanel Grid.Row="2" Margin="8,0">
-          <Border Style="{StaticResource Divider}" Margin="0,0,0,16" />
-          <TextBlock Text="내 PC에서 이름 인식" FontSize="11" />
-          <TextBlock Text="화면은 저장하지 않아요" Style="{StaticResource Caption}" FontSize="10" Margin="0,5,0,18" />
-          <DockPanel><TextBlock Text="ETERNALGG" FontSize="9" Foreground="{StaticResource SubtleBrush}" /><TextBlock Text="v0.1.0" FontSize="9" Foreground="{StaticResource SubtleBrush}" HorizontalAlignment="Right" /></DockPanel>
-        </StackPanel>
-      </Grid>
-    </Border>
-    <Grid Grid.Column="1">
-      <Grid.RowDefinitions><RowDefinition Height="60" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-      <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="28,0">
-        <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="워크스페이스" Foreground="{StaticResource MutedBrush}" /><TextBlock Text="/" Foreground="{StaticResource SubtleBrush}" Margin="12,0" /><TextBlock Text="현재 매칭" /></StackPanel>
-          <Border Grid.Column="1" Style="{StaticResource Badge}" VerticalAlignment="Center" Background="Transparent">
-            <StackPanel Orientation="Horizontal"><Ellipse Fill="{StaticResource ForegroundBrush}" Width="5" Height="5" Margin="0,0,7,0" /><TextBlock Text="{Binding GameStatus}" FontSize="10" /></StackPanel>
-          </Border>
         </Grid>
       </Border>
-      <ScrollViewer x:Name="MainScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,5,0">
-        <StackPanel Margin="28,26,23,24">
-          <Grid Margin="0,0,0,22"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock Text="현재 매칭" FontSize="26" FontWeight="SemiBold" /><TextBlock Text="매칭부터 팀원 전적까지, 한눈에 확인하세요" Style="{StaticResource Caption}" Margin="0,7,0,0" /></StackPanel>
-            <Button Grid.Column="1" Content="전적 조회" Style="{StaticResource PrimaryButton}" Command="{Binding LookupCommand}" VerticalAlignment="Center" Padding="18,9" ToolTip="현재 팀 전적 조회 · Ctrl+Enter" />
-          </Grid>
-          <Border Style="{StaticResource Panel}" Padding="20" Margin="0,0,0,12">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="44" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <Border Width="32" Height="32" Style="{StaticResource Badge}" Padding="0" VerticalAlignment="Top" Margin="0,3,12,0">
-                <Path Data="M 0,5 L 0,0 L 5,0 M 9,0 L 14,0 L 14,5 M 14,9 L 14,14 L 9,14 M 5,14 L 0,14 L 0,9 M 4,7 L 10,7" Stroke="{StaticResource ForegroundBrush}" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              </Border>
-              <StackPanel Grid.Column="1">
-                <TextBlock Text="{Binding ModeLabel}" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,0,8" />
-                <TextBlock Text="{Binding PhaseTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding PhaseDetail}" Style="{StaticResource Caption}" Margin="0,8,12,0" TextWrapping="Wrap" LineHeight="19" />
+      <Grid Grid.Row="1" Background="{StaticResource BackgroundBrush}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="184" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+          <Grid Margin="14,24,14,18">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Margin="8,0,0,34">
+                <Border Background="{StaticResource ForegroundBrush}" CornerRadius="7" Width="30" Height="30">
+                  <Path Data="M 6,16 L 14,6 M 12,19 L 20,9" Stroke="#111111" StrokeThickness="2.5" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Margin="9,0,0,0"><TextBlock Text="eternalgg" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="MATCH COMPANION" FontSize="8" Foreground="{StaticResource MutedBrush}" /></StackPanel>
               </StackPanel>
-              <Button Grid.Column="2" Content="이름 다시 읽기" Style="{StaticResource OutlineButton}" Command="{Binding RecognizeCommand}" Margin="16,0,0,0" VerticalAlignment="Center" ToolTip="게임을 전경으로 전환해 주세요 · Ctrl+R" />
+              <TextBlock Text="워크스페이스" Foreground="{StaticResource SubtleBrush}" FontSize="11" Margin="12,0,0,10" />
+              <Border Background="{StaticResource SecondaryBrush}" CornerRadius="6" Padding="12,11" Margin="0,3">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="현재 매칭" FontWeight="SemiBold" /></StackPanel>
+              </Border>
+              <Button Style="{StaticResource NavButton}" Click="SearchClick" AutomationProperties.Name="전적 검색">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="전적 검색" /></StackPanel>
+              </Button>
+              <Button Style="{StaticResource NavButton}" Command="{Binding ToggleSettingsCommand}" AutomationProperties.Name="연결 설정">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="연결 설정" /></StackPanel>
+              </Button>
+              <Button Style="{StaticResource NavButton}" Command="{Binding ToggleHelpCommand}" AutomationProperties.Name="사용 가이드">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" Margin="0,1,10,0" /><TextBlock Text="사용 가이드" /></StackPanel>
+              </Button>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Margin="8,0">
+              <Border Style="{StaticResource Divider}" Margin="0,0,0,16" />
+              <TextBlock Text="내 PC에서 이름 인식" FontSize="11" />
+              <TextBlock Text="화면은 저장하지 않아요" Style="{StaticResource Caption}" FontSize="10" Margin="0,5,0,18" />
+              <DockPanel><TextBlock Text="ETERNALGG" FontSize="9" Foreground="{StaticResource SubtleBrush}" /><TextBlock Text="v0.1.0" FontSize="9" Foreground="{StaticResource SubtleBrush}" HorizontalAlignment="Right" /></DockPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <Grid Grid.Column="1">
+          <Grid.RowDefinitions><RowDefinition Height="60" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+          <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="28,0">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="워크스페이스" Foreground="{StaticResource MutedBrush}" /><TextBlock Text="/" Foreground="{StaticResource SubtleBrush}" Margin="12,0" /><TextBlock Text="현재 매칭" /></StackPanel>
+              <Border Grid.Column="1" Style="{StaticResource Badge}" VerticalAlignment="Center" Background="Transparent">
+                <StackPanel Orientation="Horizontal"><Ellipse Fill="{StaticResource ForegroundBrush}" Width="5" Height="5" Margin="0,0,7,0" /><TextBlock Text="{Binding GameStatus}" FontSize="10" /></StackPanel>
+              </Border>
             </Grid>
           </Border>
-          <Border Style="{StaticResource Panel}" Background="Transparent" Padding="12,10" Margin="0,0,0,24">
-            <DockPanel>
-              <Button DockPanel.Dock="Right" Content="키 설정 →" Style="{StaticResource OutlineButton}" Command="{Binding ToggleSettingsCommand}" Padding="9,5" MinHeight="28" FontSize="11" Margin="12,0,0,0" />
-              <TextBlock Text="{Binding ApiBanner}" Style="{StaticResource Caption}" VerticalAlignment="Center" TextWrapping="Wrap" LineHeight="18" />
-            </DockPanel>
-          </Border>
-          <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal"><TextBlock Text="우리 팀" FontSize="16" FontWeight="SemiBold" /><Border Style="{StaticResource Badge}" Margin="9,0,0,0" Padding="6,2"><TextBlock Text="{Binding PlayerCount}" FontSize="10" /></Border></StackPanel>
-            <TextBlock Grid.Column="1" Text="닉네임 직접 수정 가능" Style="{StaticResource Caption}" FontSize="11" VerticalAlignment="Center" />
-          </Grid>
-          <ItemsControl ItemsSource="{Binding Players}" Margin="-4,0">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate><DataTemplate>
-              <Border Style="{StaticResource Panel}" Margin="4,0" Padding="16">
+          <ScrollViewer x:Name="MainScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,5,0">
+            <StackPanel Margin="28,26,23,24">
+              <Grid Margin="0,0,0,22"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel><TextBlock Text="현재 매칭" FontSize="26" FontWeight="SemiBold" /><TextBlock Text="매칭부터 팀원 전적까지, 한눈에 확인하세요" Style="{StaticResource Caption}" Margin="0,7,0,0" /></StackPanel>
+                <Button Grid.Column="1" Content="전적 조회" Style="{StaticResource PrimaryButton}" Command="{Binding LookupCommand}" VerticalAlignment="Center" Padding="18,9" ToolTip="현재 팀 전적 조회 / Ctrl+Enter" />
+              </Grid>
+              <Border Style="{StaticResource Panel}" Padding="20" Margin="0,0,0,12">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="44" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <Border Width="32" Height="32" Style="{StaticResource Badge}" Padding="0" VerticalAlignment="Top" Margin="0,3,12,0">
+                    <Path Data="M 0,5 L 0,0 L 5,0 M 9,0 L 14,0 L 14,5 M 14,9 L 14,14 L 9,14 M 5,14 L 0,14 L 0,9 M 4,7 L 10,7" Stroke="{StaticResource ForegroundBrush}" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding ModeLabel}" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding PhaseTitle}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding PhaseDetail}" Style="{StaticResource Caption}" Margin="0,8,12,0" TextWrapping="Wrap" LineHeight="19" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Content="이름 다시 읽기" Style="{StaticResource OutlineButton}" Command="{Binding RecognizeCommand}" Margin="16,0,0,0" VerticalAlignment="Center" ToolTip="게임을 전경으로 전환해 주세요 / Ctrl+R" />
+                </Grid>
+              </Border>
+              <Border Style="{StaticResource Panel}" Background="Transparent" Padding="12,10" Margin="0,0,0,24">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="키 설정 →" Style="{StaticResource OutlineButton}" Command="{Binding ToggleSettingsCommand}" Padding="9,5" MinHeight="28" FontSize="11" Margin="12,0,0,0" />
+                  <TextBlock Text="{Binding ApiBanner}" Style="{StaticResource Caption}" VerticalAlignment="Center" TextWrapping="Wrap" LineHeight="18" />
+                </DockPanel>
+              </Border>
+              <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal"><TextBlock Text="우리 팀" FontSize="16" FontWeight="SemiBold" /><Border Style="{StaticResource Badge}" Margin="9,0,0,0" Padding="6,2"><TextBlock Text="{Binding PlayerCount}" FontSize="10" /></Border></StackPanel>
+                <TextBlock Grid.Column="1" Text="닉네임 직접 수정 가능" Style="{StaticResource Caption}" FontSize="11" VerticalAlignment="Center" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Players}" Margin="-4,0">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <Border Style="{StaticResource Panel}" Margin="4,0" Padding="16">
+                    <StackPanel>
+                      <DockPanel Margin="0,0,0,16">
+                        <Border Style="{StaticResource Badge}" Background="Transparent" HorizontalAlignment="Left"><TextBlock Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" /></Border>
+                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource SubtleBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      </DockPanel>
+                      <Grid>
+                        <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" FontSize="17" FontWeight="SemiBold" Height="40" AutomationProperties.Name="플레이어 닉네임" ToolTip="읽은 이름을 확인하거나 닉네임을 직접 입력하세요" />
+                        <TextBlock Text="닉네임 확인 대기" Margin="11,0" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource SubtleBrush}" IsHitTestVisible="False">
+                          <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasName}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                        </TextBlock>
+                      </Grid>
+                      <TextBlock Text="{Binding Source}" Style="{StaticResource Caption}" FontSize="10" Margin="0,7,0,16" TextTrimming="CharacterEllipsis" ToolTip="{Binding Source}" />
+                      <TextBlock Text="MMR" Style="{StaticResource Caption}" FontSize="10" />
+                      <TextBlock Text="{Binding Mmr}" FontSize="30" FontWeight="SemiBold" Margin="0,2,0,14" />
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="경기 수" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding Games}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
+                        <StackPanel Grid.Column="1"><TextBlock Text="승률" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding WinRate}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="평균 순위" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding AverageRank}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
+                      </Grid>
+                      <Border Style="{StaticResource Divider}" Margin="0,16,0,12" />
+                      <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap" LineHeight="17" MinHeight="34" />
+                      <TextBlock Text="{Binding Recent}" Style="{StaticResource Caption}" FontSize="10" TextWrapping="Wrap" LineHeight="16" MinHeight="32" Margin="0,5,0,0" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <DockPanel Margin="0,12,0,22"><TextBlock DockPanel.Dock="Right" Text="공식 API 데이터" Style="{StaticResource Caption}" FontSize="10" TextAlignment="Right" /><TextBlock Text="{Binding LastUpdated, StringFormat=마지막 조회 / {0}}" Style="{StaticResource Caption}" FontSize="10" /></DockPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="200" /></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Panel}" Padding="16" Margin="0,0,12,0">
+                  <StackPanel>
+                    <TextBlock Text="연결 상태" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <WrapPanel>
+                      <TextBlock Text="로그" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding LogStatus}" FontSize="11" Margin="0,0,16,0" />
+                      <TextBlock Text="OCR" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding OcrStatus}" FontSize="11" Margin="0,0,16,0" />
+                      <TextBlock Text="API" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding ApiStatus}" FontSize="11" />
+                    </WrapPanel>
+                    <Border Style="{StaticResource Divider}" Margin="0,14,0,9" />
+                    <ItemsControl ItemsSource="{Binding Events}">
+                      <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Caption}" FontSize="10" Margin="0,3" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource Panel}" Background="Transparent" Padding="16" MinHeight="148">
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="ADVERTISEMENT" Foreground="{StaticResource SubtleBrush}" FontSize="9" HorizontalAlignment="Center" />
+                    <Border Style="{StaticResource Divider}" Width="24" Margin="0,13" />
+                    <TextBlock Text="잠시 쉬어가는 공간" FontSize="12" TextAlignment="Center" />
+                    <TextBlock Text="현재 표시 중인 광고 없음" Style="{StaticResource Caption}" FontSize="10" Margin="0,7,0,0" TextAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+              <Border x:Name="SettingsPanel" Style="{StaticResource Panel}" Visibility="{Binding SettingsOpen, Converter={StaticResource Visible}}" Padding="20" Margin="0,18,0,0">
                 <StackPanel>
-                  <DockPanel Margin="0,0,0,16">
-                    <Border Style="{StaticResource Badge}" Background="Transparent" HorizontalAlignment="Left"><TextBlock Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" /></Border>
-                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource SubtleBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                  </DockPanel>
+                  <TextBlock Text="연결 설정" FontSize="20" FontWeight="SemiBold" />
+                  <TextBlock Text="이름 인식과 전적 조회에 필요한 정보를 관리하세요" Style="{StaticResource Caption}" Margin="0,7,0,20" />
                   <Grid>
-                    <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" FontSize="17" FontWeight="SemiBold" Height="40" AutomationProperties.Name="플레이어 닉네임" ToolTip="읽은 이름을 확인하거나 닉네임을 직접 입력하세요" />
-                    <TextBlock Text="닉네임 확인 대기" Margin="11,0" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource SubtleBrush}" IsHitTestVisible="False">
-                      <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasName}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                    </TextBlock>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="20" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock Text="본인 닉네임" FontSize="12" Margin="0,0,0,8" /><TextBox Text="{Binding SelfNickname, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="본인 닉네임" /></StackPanel>
+                    <StackPanel Grid.Column="2"><TextBlock Text="공식 API 키" FontSize="12" Margin="0,0,0,8" /><PasswordBox x:Name="ApiKeyBox" PasswordChanged="ApiKeyChanged" AutomationProperties.Name="공식 API 키" /><TextBlock Text="선택 사항 / 이번 실행에만 보관" Style="{StaticResource Caption}" FontSize="10" Margin="0,6,0,0" /></StackPanel>
                   </Grid>
-                  <TextBlock Text="{Binding Source}" Style="{StaticResource Caption}" FontSize="10" Margin="0,7,0,16" TextTrimming="CharacterEllipsis" ToolTip="{Binding Source}" />
-                  <TextBlock Text="MMR" Style="{StaticResource Caption}" FontSize="10" />
-                  <TextBlock Text="{Binding Mmr}" FontSize="30" FontWeight="SemiBold" Margin="0,2,0,14" />
-                  <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
-                    <StackPanel><TextBlock Text="경기 수" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding Games}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
-                    <StackPanel Grid.Column="1"><TextBlock Text="승률" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding WinRate}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
-                    <StackPanel Grid.Column="2"><TextBlock Text="평균 순위" Style="{StaticResource Caption}" FontSize="10" /><TextBlock Text="{Binding AverageRank}" FontSize="16" FontWeight="Medium" Margin="0,6,0,0" /></StackPanel>
-                  </Grid>
-                  <Border Style="{StaticResource Divider}" Margin="0,16,0,12" />
-                  <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap" LineHeight="17" MinHeight="34" />
-                  <TextBlock Text="{Binding Recent}" Style="{StaticResource Caption}" FontSize="10" TextWrapping="Wrap" LineHeight="16" MinHeight="32" Margin="0,5,0,0" />
+                  <WrapPanel Margin="0,18">
+                    <TextBlock Text="시즌 ID" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12" /><TextBox Text="{Binding SeasonInput, UpdateSourceTrigger=PropertyChanged}" Width="70" AutomationProperties.Name="시즌 ID" />
+                    <CheckBox Content="랭크 전적 조회" IsChecked="{Binding Ranked}" Margin="20,0,0,0" /><CheckBox Content="자동 이름 감지" IsChecked="{Binding AutoDetect}" Margin="20,0,0,0" />
+                  </WrapPanel>
+                  <TextBlock Text="게임 로그 경로" FontSize="12" Margin="0,0,0,8" /><TextBox Text="{Binding LogPath, UpdateSourceTrigger=PropertyChanged}" FontSize="11" AutomationProperties.Name="게임 로그 경로" />
+                  <Border Style="{StaticResource Divider}" Margin="0,18" />
+                  <TextBlock Text="최근 OCR 진단 / 이 PC에만 표시" Style="{StaticResource Caption}" FontSize="11" />
+                  <TextBlock Text="{Binding OcrDiagnostic}" Style="{StaticResource Caption}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding SettingsMessage}" Style="{StaticResource Caption}" FontSize="11" Margin="0,16" TextWrapping="Wrap" />
+                  <Button Content="설정 저장" Style="{StaticResource PrimaryButton}" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Right" />
                 </StackPanel>
               </Border>
-            </DataTemplate></ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <DockPanel Margin="0,12,0,22"><TextBlock DockPanel.Dock="Right" Text="공식 API 데이터" Style="{StaticResource Caption}" FontSize="10" TextAlignment="Right" /><TextBlock Text="{Binding LastUpdated, StringFormat=마지막 조회 · {0}}" Style="{StaticResource Caption}" FontSize="10" /></DockPanel>
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="200" /></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource Panel}" Padding="16" Margin="0,0,12,0">
-              <StackPanel>
-                <TextBlock Text="연결 상태" FontWeight="SemiBold" Margin="0,0,0,12" />
-                <WrapPanel>
-                  <TextBlock Text="로그" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding LogStatus}" FontSize="11" Margin="0,0,16,0" />
-                  <TextBlock Text="OCR" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding OcrStatus}" FontSize="11" Margin="0,0,16,0" />
-                  <TextBlock Text="API" Style="{StaticResource Caption}" FontSize="11" Margin="0,0,7,0" /><TextBlock Text="{Binding ApiStatus}" FontSize="11" />
-                </WrapPanel>
-                <Border Style="{StaticResource Divider}" Margin="0,14,0,9" />
-                <ItemsControl ItemsSource="{Binding Events}">
-                  <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Caption}" FontSize="10" Margin="0,3" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Style="{StaticResource Panel}" Background="Transparent" Padding="16" MinHeight="148">
-              <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="ADVERTISEMENT" Foreground="{StaticResource SubtleBrush}" FontSize="9" HorizontalAlignment="Center" />
-                <Border Style="{StaticResource Divider}" Width="24" Margin="0,13" />
-                <TextBlock Text="잠시 쉬어가는 공간" FontSize="12" TextAlignment="Center" />
-                <TextBlock Text="현재 표시 중인 광고 없음" Style="{StaticResource Caption}" FontSize="10" Margin="0,7,0,0" TextAlignment="Center" />
-              </StackPanel>
-            </Border>
-          </Grid>
-          <Border x:Name="SettingsPanel" Style="{StaticResource Panel}" Visibility="{Binding SettingsOpen, Converter={StaticResource Visible}}" Padding="20" Margin="0,18,0,0">
-            <StackPanel>
-              <TextBlock Text="연결 설정" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="이름 인식과 전적 조회에 필요한 정보를 관리하세요" Style="{StaticResource Caption}" Margin="0,7,0,20" />
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="20" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <StackPanel><TextBlock Text="본인 닉네임" FontSize="12" Margin="0,0,0,8" /><TextBox Text="{Binding SelfNickname, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="본인 닉네임" /></StackPanel>
-                <StackPanel Grid.Column="2"><TextBlock Text="공식 API 키" FontSize="12" Margin="0,0,0,8" /><PasswordBox x:Name="ApiKeyBox" PasswordChanged="ApiKeyChanged" AutomationProperties.Name="공식 API 키" /><TextBlock Text="선택 사항 · 이번 실행에만 보관" Style="{StaticResource Caption}" FontSize="10" Margin="0,6,0,0" /></StackPanel>
-              </Grid>
-              <WrapPanel Margin="0,18">
-                <TextBlock Text="시즌 ID" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12" /><TextBox Text="{Binding SeasonInput, UpdateSourceTrigger=PropertyChanged}" Width="70" AutomationProperties.Name="시즌 ID" />
-                <CheckBox Content="랭크 전적 조회" IsChecked="{Binding Ranked}" Margin="20,0,0,0" /><CheckBox Content="자동 이름 감지" IsChecked="{Binding AutoDetect}" Margin="20,0,0,0" />
-              </WrapPanel>
-              <TextBlock Text="게임 로그 경로" FontSize="12" Margin="0,0,0,8" /><TextBox Text="{Binding LogPath, UpdateSourceTrigger=PropertyChanged}" FontSize="11" AutomationProperties.Name="게임 로그 경로" />
-              <Border Style="{StaticResource Divider}" Margin="0,18" />
-              <TextBlock Text="최근 OCR 진단 · 이 PC에만 표시" Style="{StaticResource Caption}" FontSize="11" />
-              <TextBlock Text="{Binding OcrDiagnostic}" Style="{StaticResource Caption}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding SettingsMessage}" Style="{StaticResource Caption}" FontSize="11" Margin="0,16" TextWrapping="Wrap" />
-              <Button Content="설정 저장" Style="{StaticResource PrimaryButton}" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Right" />
+              <Border Style="{StaticResource Panel}" Visibility="{Binding HelpOpen, Converter={StaticResource Visible}}" Padding="20" Margin="0,16,0,0">
+                <StackPanel>
+                  <TextBlock Text="사용 가이드" FontSize="20" FontWeight="SemiBold" />
+                  <TextBlock Text="1. 게임을 실행하고 매칭을 시작하세요.&#10;2. 팀원 이름이 표시되는 동안 게임을 전경에 두세요.&#10;3. 이름을 확인하고 API 키와 시즌 ID를 입력해 전적을 조회하세요." Style="{StaticResource Caption}" LineHeight="25" Margin="0,14" TextWrapping="Wrap" />
+                  <Border Style="{StaticResource Divider}" Margin="0,0,0,14" />
+                  <TextBlock Text="이름이 틀리면 카드에서 직접 수정할 수 있어요. AI 대전은 본인 1명만 확인합니다.&#10;게임 중 이름을 다시 읽으려면 Tab 정보 화면을 열어주세요.&#10;Ctrl+R 이름 다시 읽기 / Ctrl+Enter 전적 조회 / Ctrl+, 설정&#10;&#10;API 키가 없으면 이름 감지만 사용하며 전적은 비워 둡니다.&#10;화면 원본은 저장하거나 업로드하지 않습니다." Style="{StaticResource Caption}" LineHeight="24" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
             </StackPanel>
-          </Border>
-          <Border Style="{StaticResource Panel}" Visibility="{Binding HelpOpen, Converter={StaticResource Visible}}" Padding="20" Margin="0,16,0,0">
-            <StackPanel>
-              <TextBlock Text="사용 가이드" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="1. 게임을 실행하고 매칭을 시작하세요.&#10;2. 팀원 이름이 표시되는 동안 게임을 전경에 두세요.&#10;3. 이름을 확인하고 API 키와 시즌 ID를 입력해 전적을 조회하세요." Style="{StaticResource Caption}" LineHeight="25" Margin="0,14" TextWrapping="Wrap" />
-              <Border Style="{StaticResource Divider}" Margin="0,0,0,14" />
-              <TextBlock Text="이름이 틀리면 카드에서 직접 수정할 수 있어요. AI 대전은 본인 1명만 확인합니다.&#10;게임 중 이름을 다시 읽으려면 Tab 정보 화면을 열어주세요.&#10;Ctrl+R 이름 다시 읽기 · Ctrl+Enter 전적 조회 · Ctrl+, 설정&#10;&#10;API 키가 없으면 이름 감지만 사용하며 전적은 비워 둡니다.&#10;화면 원본은 저장하거나 업로드하지 않습니다." Style="{StaticResource Caption}" LineHeight="24" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
-      </ScrollViewer>
+          </ScrollViewer>
+        </Grid>
+      </Grid>
     </Grid>
-  </Grid>
+  </Border>
 </Window>
