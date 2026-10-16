@@ -9,28 +9,49 @@ namespace EternalGG.App;
 /** 메인 창 이벤트와 화면 연결 */
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel viewModel = new();
+    private readonly MainViewModel viewModel;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
     /** 화면 초기화 및 상태 갱신 타이머 연결 */
-    public MainWindow()
+    public MainWindow() : this(new MainViewModel(), true) { }
+
+    /** 상태 모델과 게임 감시의 명시적 연결 */
+    public MainWindow(MainViewModel model, bool monitorGame)
     {
+        viewModel = model;
         InitializeComponent();
         SourceInitialized += (_, _) => LimitPhysicalSize();
         DpiChanged += (_, _) => LimitPhysicalSize();
         DataContext = viewModel;
+        viewModel.AttentionRequested += (_, _) => BringForwardOnce();
 
-        /** 설정 표시 시 입력 영역으로 이동 */
+        /** 탐색 이동 후 스크롤과 검색 입력 위치 갱신 */
         viewModel.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(MainViewModel.SettingsOpen) && viewModel.SettingsOpen)
-                Dispatcher.InvokeAsync(() => SettingsPanel.BringIntoView());
+            if (args.PropertyName == nameof(MainViewModel.DeveloperMode) && !viewModel.DeveloperMode)
+                ApiKeyBox.Clear();
+            if (args.PropertyName != nameof(MainViewModel.CurrentPage)) return;
+            Dispatcher.InvokeAsync(() =>
+            {
+                MainScroll.ScrollToTop();
+                if (viewModel.SearchOpen) SearchInput.Focus();
+            });
         };
 
         /** 주기 갱신 시작 및 창 종료 시 자원 정리 */
         timer.Tick += async (_, _) => await viewModel.TickAsync();
-        Loaded += async (_, _) => { await viewModel.TickAsync(); timer.Start(); };
+        if (monitorGame) Loaded += async (_, _) => { await viewModel.TickAsync(); timer.Start(); };
         Closed += (_, _) => { timer.Stop(); viewModel.Dispose(); };
+    }
+
+    /** 최소화 복구와 한 번의 창 전면 표시 */
+    private void BringForwardOnce()
+    {
+        if (!IsLoaded) return;
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        var previousTopmost = Topmost;
+        try { Topmost = true; Activate(); }
+        finally { Topmost = previousTopmost; }
     }
 
     /** 창 최소화 */
@@ -48,26 +69,6 @@ public partial class MainWindow : Window
 
     /** 입력한 API 키의 메모리 상태 반영 */
     private void ApiKeyChanged(object sender, RoutedEventArgs e) => viewModel.ApiKey = ((PasswordBox)sender).Password;
-
-    /** 직접 검색용 닉네임 입력란 이동 */
-    private void SearchClick(object sender, RoutedEventArgs e)
-    {
-        viewModel.SettingsOpen = false;
-        FindNameInput(this)?.Focus();
-    }
-
-    /** 화면 트리의 첫 닉네임 입력란 탐색 */
-    private static TextBox? FindNameInput(DependencyObject parent)
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is TextBox box) { box.BringIntoView(); return box; }
-            if (FindNameInput(child) is { } found) return found;
-        }
-
-        return null;
-    }
 
     /** 화면 배율별 물리 창 크기의 최대 1248픽셀 제한 */
     private void LimitPhysicalSize()

@@ -62,6 +62,31 @@ Assert(result.Stats!.Recent == "2위", "recent matches filtered by selected seas
 /** 잘못된 API 키의 오류 처리 검증 */
 handler.Status = HttpStatusCode.Forbidden;
 Assert((await api.LookupAsync("이하링", "bad-key", 33, 2, default)).Stats == null, "invalid key does not fabricate statistics");
+var forbidden = await api.LookupAsync("이하링", "bad-key", 33, 2, default);
+handler.Status = HttpStatusCode.TooManyRequests;
+var limited = await api.LookupAsync("이하링", "test-key", 33, 2, default);
+Assert(forbidden.Message != limited.Message && limited.Message.Contains("잠시 후"), "authentication and retryable rate limit are distinguished");
+handler.Status = HttpStatusCode.NotFound;
+Assert((await api.LookupAsync("없는사용자", "test-key", 33, 2, default)).Stats == null, "not found remains distinct from zero games");
+
+/** 실제 게임 없는 연결과 매칭 알림의 중복 방지 검증 */
+var attention = new GameAttention();
+var now = DateTimeOffset.Parse("2026-10-16T12:00:00Z");
+Assert(attention.Observe(false, MatchPhase.Lobby, 0, false, now) == GameNotice.None, "offline has no window request");
+Assert(attention.Observe(true, MatchPhase.Lobby, 0, false, now) == GameNotice.Connected, "first connection requests one window display");
+Assert(attention.Observe(true, MatchPhase.Lobby, 0, false, now) == GameNotice.None, "connection polling never repeats display");
+Assert(attention.Observe(true, MatchPhase.Queuing, 1, false, now) == GameNotice.None, "queue alone does not claim a match");
+Assert(attention.Observe(true, MatchPhase.Matched, 1, false, now) == GameNotice.None, "name capture gets time before window display");
+Assert(attention.Observe(true, MatchPhase.Matched, 1, true, now.AddSeconds(2)) == GameNotice.MatchDetected, "confirmed roster triggers one match display");
+Assert(attention.Observe(true, MatchPhase.Loading, 1, true, now.AddSeconds(3)) == GameNotice.None, "loading cannot repeat match display");
+attention.Observe(true, MatchPhase.Matched, 2, false, now);
+Assert(attention.Observe(true, MatchPhase.Matched, 2, false, now.AddSeconds(8)) == GameNotice.MatchDetected, "missing names still produce a bounded match notice");
+Assert(attention.Observe(true, MatchPhase.InGame, 3, true, now.AddSeconds(10)) == GameNotice.None, "in-game updates do not raise the window");
+attention.Observe(false, MatchPhase.Lobby, 3, false, now);
+Assert(attention.Observe(true, MatchPhase.Matched, 5, true, now) == GameNotice.Connected && attention.Observe(true, MatchPhase.Matched, 5, true, now.AddSeconds(9)) == GameNotice.None, "reconnection shows once without replaying historical match");
+attention.Observe(true, MatchPhase.Matched, 6, false, now);
+attention.Observe(true, MatchPhase.Lobby, 6, false, now);
+Assert(attention.Observe(true, MatchPhase.Matched, 6, true, now.AddSeconds(9)) == GameNotice.None, "cancelled selection does not replay its pending notice");
 Console.WriteLine($"{count} checks passed. HTTP fixtures only; no live API verification.");
 
 /** 외부 통신 없는 고정 API 응답 */

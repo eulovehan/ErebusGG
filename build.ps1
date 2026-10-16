@@ -14,6 +14,8 @@ try {
     if ($Test) {
         & $taskDotnet run --project tests\EternalGG.Tests -c Release --no-build
         if ($LASTEXITCODE) { throw 'Tests failed' }
+        & $taskDotnet run --project tests\EternalGG.UiTests -c Release --no-build
+        if ($LASTEXITCODE) { throw 'UI checks failed' }
     }
     if ($Publish) {
         & $taskDotnet publish src\EternalGG.App -c Release -r win-x64 --self-contained true --no-restore -p:PublishSingleFile=false -o artifacts\win-x64

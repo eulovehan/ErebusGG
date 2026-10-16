@@ -10,6 +10,7 @@ public sealed class AppSettings
     public int Season { get; set; }
     public bool Ranked { get; set; }
     public bool AutoDetect { get; set; } = true;
+    public bool BringForward { get; set; } = true;
     public string LogPath { get; set; } = LogMonitor.DefaultPath;
 
     /** 캐릭터 선택 화면의 아군 이름 영역 */
