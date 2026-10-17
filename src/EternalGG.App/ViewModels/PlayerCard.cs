@@ -8,7 +8,7 @@ public partial class PlayerCard : ObservableObject
 {
     [ObservableProperty] private string nickname = "";
     [ObservableProperty] private string source = "이름 확인 대기";
-    [ObservableProperty] private string status = "아직 확인된 플레이어가 없습니다";
+    [ObservableProperty] private string status = "자동 확인되지 않으면 닉네임을 직접 입력해 주세요";
     [ObservableProperty] private string mmr = "—";
     [ObservableProperty] private string games = "—";
     [ObservableProperty] private string winRate = "—";
@@ -16,18 +16,21 @@ public partial class PlayerCard : ObservableObject
     [ObservableProperty] private string recent = "";
     [ObservableProperty] private bool hasStats;
     [ObservableProperty] private bool hasSlot;
+    [ObservableProperty] private bool screenVerified;
     [ObservableProperty] private string fetchedAt = "";
     public string Label { get; init; } = "ALLY";
     public bool HasName => !string.IsNullOrWhiteSpace(Nickname);
     public bool IsReadOnly { get; init; }
     public int Revision { get; private set; }
     public bool UserEdited { get; private set; }
+    public bool HasConfirmedName => HasName && (ScreenVerified || UserEdited);
     private bool detecting;
 
     /** 닉네임 변경에 따른 기존 전적 초기화 */
     partial void OnNicknameChanged(string value)
     {
         ClearStats();
+        ScreenVerified = false;
         Revision++;
         if (!string.IsNullOrWhiteSpace(value)) HasSlot = true;
         if (!detecting) UserEdited = HasSlot;
@@ -39,12 +42,25 @@ public partial class PlayerCard : ObservableObject
     /** 직접 수정한 이름을 보존하는 자동 이름 반영 */
     public bool SetDetectedName(string value)
     {
-        if (UserEdited || Nickname == value && Source == "자동 확인") return false;
+        if (UserEdited || Nickname == value && ScreenVerified) return false;
         detecting = true;
         try { Nickname = value; }
         finally { detecting = false; }
         Source = "자동 확인";
+        ScreenVerified = true;
         return true;
+    }
+
+    /** 화면 확인 전 등록 이름의 별도 표시 */
+    public void SetRegisteredName(string value)
+    {
+        if (UserEdited || ScreenVerified) return;
+        detecting = true;
+        try { Nickname = value; }
+        finally { detecting = false; }
+        ScreenVerified = false;
+        Source = "등록한 이름 / 확인 필요";
+        Status = "화면에서 본인 이름을 확인하고 있어요";
     }
 
     /** 다음 매칭의 입력 상태 초기화 */
@@ -54,6 +70,7 @@ public partial class PlayerCard : ObservableObject
         try { Nickname = ""; }
         finally { detecting = false; }
         UserEdited = false;
+        ScreenVerified = false;
         HasSlot = false;
         Revision++;
         ClearStats();

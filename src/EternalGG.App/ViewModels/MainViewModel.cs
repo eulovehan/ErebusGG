@@ -21,7 +21,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly OcrService ocr = new();
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(12) };
     private readonly CancellationTokenSource lifetime = new();
-    private readonly Dictionary<int, (string Name, int Hits)> votes = [];
+    private readonly NicknameConsensus names = new();
     private readonly GameAttention attention = new();
     public event EventHandler? AttentionRequested;
     private DateTime captureUntil;
@@ -149,7 +149,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /** 팀 구성과 빈 화면 동기화 */
     private void NotifyTeam()
     {
-        var roster = Players.Take(Match.IsAi ? 1 : 3).Where(p => p.HasSlot).ToArray();
+        var slots = Players.Take(Match.IsAi ? 1 : 3).ToArray();
+        var active = Match.Phase is MatchPhase.Matched or MatchPhase.Loading or MatchPhase.InGame;
+        var roster = active || slots.Any(p => p.HasSlot) ? slots : [];
         foreach (var card in VisiblePlayers.Except(roster).ToArray()) VisiblePlayers.Remove(card);
         for (var i = 0; i < roster.Length; i++)
             if (!VisiblePlayers.Contains(roster[i])) VisiblePlayers.Insert(i, roster[i]);
@@ -195,7 +197,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (GameCapture.FindGame() == 0) { NameMessage = "이터널리턴을 실행한 뒤 이름을 다시 확인해 주세요"; return; }
         manualCaptureUntil = DateTime.Now.AddSeconds(40);
-        votes.Clear();
+        names.Reset();
         NameMessage = OcrStatus = "게임을 앞으로 가져오세요. 40초 동안 이름을 다시 확인합니다.";
         AddEvent("40초 동안 이름 확인 / 게임을 전경으로 전환해 주세요");
     }
@@ -263,7 +265,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (notice == GameNotice.None) return;
         LatestNotice = now.ToLocalTime().ToString("HH:mm") + (notice == GameNotice.Connected ? " / 게임 연결 확인" : " / 새 매칭 확인");
         if (!BringForward) return;
-        if (notice == GameNotice.MatchDetected && !namesReady)
+        if (notice == GameNotice.MatchDetected && !namesReady && NameMessage.Length == 0)
             NameMessage = "게임으로 돌아가면 팀원 이름 확인을 계속합니다";
         CurrentPage = "match";
         AttentionRequested?.Invoke(this, EventArgs.Empty);
@@ -272,9 +274,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /** 현재 팀 이름의 확정 상태로 알림 시점 갱신 */
     private void UpdateAttention(bool running)
     {
-        var ready = Players.Take(Match.IsAi ? 1 : 3).All(p => p.HasName && (p.Source == "자동 확인" || p.UserEdited));
+        var ready = Players.Take(Match.IsAi ? 1 : 3).All(p => p.HasConfirmedName);
         if (ready && NameMessage == "게임으로 돌아가면 팀원 이름 확인을 계속합니다") NameMessage = "";
         ObserveGameAttention(running, Match.Phase, Match.Generation, ready, DateTimeOffset.Now);
+    }
+
+    /** 누락을 포함한 한 프레임의 이름 확정과 수동 수정 보존 */
+    public bool ApplyNameFrame(IReadOnlyList<OcrCandidate> candidates)
+    {
+        var expected = Match.IsAi ? 1 : 3;
+        var confirmed = names.ObserveFrame(candidates.Select(c => (c.Slot, c.Name, c.Confidence)), expected);
+        var added = false;
+        foreach (var candidate in confirmed)
+        {
+            if (candidate.Slot == 0 && !string.IsNullOrWhiteSpace(SelfNickname) && candidate.Name != SelfNickname)
+            {
+                NameMessage = "읽은 이름이 등록한 본인 이름과 달라요. 닉네임을 직접 확인해 주세요.";
+                continue;
+            }
+
+            if (!Players[candidate.Slot].SetDetectedName(candidate.Name)) continue;
+            AddEvent($"플레이어 {candidate.Slot + 1} 이름 확인 완료");
+            added = true;
+        }
+
+        if (Players.Take(expected).All(p => p.HasConfirmedName)) NameMessage = "";
+        NotifyTeam();
+        return added;
     }
 
     /** 게임 연결과 로그 및 인식 상태의 주기 갱신 */
@@ -290,7 +316,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             /** 게임 종료 시 팀 정보와 감지 상태 정리 */
             if (!running)
             {
-                if (wasRunning) { ClearTeam(); Match.Reset(); captureUntil = DateTime.MinValue; manualCaptureUntil = DateTime.MinValue; logs.Dispose(); initial = true; }
+                if (wasRunning) { Match.Reset(); ClearTeam(); captureUntil = DateTime.MinValue; manualCaptureUntil = DateTime.MinValue; logs.Dispose(); initial = true; }
                 wasRunning = false;
                 UpdateAttention(false);
                 LatestNotice = "";
@@ -330,18 +356,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     captureUntil = DateTime.Now.AddSeconds(120);
                     if (Players.All(p => !p.HasName) && !string.IsNullOrWhiteSpace(SelfNickname))
                     {
-                        Players[0].SetDetectedName(SelfNickname);
-                        Players[0].Source = "등록한 이름 / 확인 필요";
+                        Players[0].SetRegisteredName(SelfNickname);
                     }
                 }
 
                 if (Match.Phase is MatchPhase.Lobby or MatchPhase.Finished) captureUntil = DateTime.MinValue;
-                if (Match.Phase == MatchPhase.InGame) captureUntil = DateTime.MinValue;
+                if (Match.Phase == MatchPhase.InGame)
+                {
+                    captureUntil = DateTime.MinValue;
+                    if (NameMessage.Length == 0 && !Players.Take(Match.IsAi ? 1 : 3).All(p => p.HasConfirmedName))
+                        NameMessage = "확인되지 않은 팀원은 닉네임을 입력하거나 이름 다시 확인을 눌러 주세요";
+                }
                 if (Match.Phase == MatchPhase.Lobby) ClearTeam();
             }
 
             /** 자동 또는 수동 인식 구간의 캡처 간격 제한 */
             RefreshPhase();
+            NotifyTeam();
             UpdateAttention(true);
             var manual = DateTime.Now < manualCaptureUntil;
             if ((AutoDetect && DateTime.Now < captureUntil || manual) && (DateTime.Now - lastCapture).TotalSeconds >= 1.2)
@@ -356,37 +387,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     if (screenshot == null) return null;
                     var regions = Match.Phase == MatchPhase.InGame ? Settings.GameRegions : Settings.SelectionRegions;
                     if (Match.IsAi) regions = regions.Take(1).ToList();
-                    return ocr.Read(screenshot, regions);
+                    return ocr.Read(screenshot, regions, Match.Phase != MatchPhase.InGame);
                 });
                 if (generation != Match.Generation) return;
-                if (candidates == null) OcrStatus = "게임 화면이 전경일 때 인식";
+                if (candidates == null)
+                {
+                    names.Reset();
+                    OcrStatus = "게임 화면이 전경일 때 인식";
+                }
                 else
                 {
                     OcrDiagnostic = ocr.Diagnostics;
                     OcrStatus = candidates.Count == 0 ? "이름 표시 영역 확인 중" : "이름 후보 확인 중";
-                    var added = false;
-
-                    /** 연속 두 번 일치한 닉네임만 확정 */
-                    foreach (var candidate in candidates)
-                    {
-                        var previous = votes.GetValueOrDefault(candidate.Slot);
-                        var hits = previous.Name == candidate.Name ? previous.Hits + 1 : 1;
-                        votes[candidate.Slot] = (candidate.Name, hits);
-                        if (hits < 2) continue;
-                        var card = Players[candidate.Slot];
-                        if (card.SetDetectedName(candidate.Name))
-                        {
-                            card.Source = "자동 확인";
-                            AddEvent($"플레이어 {candidate.Slot + 1} 이름 인식 완료");
-                            added = true;
-                        }
-                    }
+                    var added = ApplyNameFrame(candidates);
 
                     /** 이름 확정 후 전적 조회 및 인식 완료 처리 */
                     UpdateAttention(true);
-                    if (added && !string.IsNullOrWhiteSpace(ApiKey)) await LookupAsync();
+                    if (added && !string.IsNullOrWhiteSpace(ApiKey)) await QueryAsync(VisiblePlayers.Where(p => p.HasConfirmedName).ToArray(), true);
                     var expected = Match.IsAi ? 1 : 3;
-                    if (Players.Take(expected).All(p => p.HasName && (p.Source == "자동 확인" || p.UserEdited)))
+                    if (Players.Take(expected).All(p => p.HasConfirmedName))
                     {
                         OcrStatus = "이름 확인 완료";
                         captureUntil = manualCaptureUntil = DateTime.MinValue;
@@ -394,11 +413,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            NotifyTeam();
             if (DateTime.Now >= manualCaptureUntil && NameMessage.Contains("40초")) NameMessage = "이름 확인이 끝났어요. 잘못된 이름은 카드에서 수정할 수 있습니다.";
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or TesseractException or System.ComponentModel.Win32Exception)
         {
+            names.Reset();
             NameMessage = "이름을 확인하지 못했어요. 전적 검색에서 닉네임을 직접 입력할 수 있습니다.";
             OcrStatus = "인식 환경 확인 필요";
             if (Events.FirstOrDefault()?.Contains("환경 오류") != true) AddEvent("환경 오류 / " + e.GetType().Name);
@@ -432,7 +451,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         foreach (var card in Players) card.Reset();
         NameMessage = "";
         LastUpdated = "아직 조회하지 않음";
-        votes.Clear();
+        names.Reset();
         NotifyTeam();
     }
 

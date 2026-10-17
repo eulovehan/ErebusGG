@@ -87,6 +87,34 @@ Assert(attention.Observe(true, MatchPhase.Matched, 5, true, now) == GameNotice.C
 attention.Observe(true, MatchPhase.Matched, 6, false, now);
 attention.Observe(true, MatchPhase.Lobby, 6, false, now);
 Assert(attention.Observe(true, MatchPhase.Matched, 6, true, now.AddSeconds(9)) == GameNotice.None, "cancelled selection does not replay its pending notice");
+
+/** 오인식 확정과 누락 프레임의 연속 일치 회귀 검증 */
+var names = new NicknameConsensus();
+(int Slot, string Name, float Confidence)[] goodName = [(0, "정확이름", 0.93f)];
+Assert(names.ObserveFrame(goodName, 3).Count == 0 && names.ObserveFrame(goodName, 3).Count == 0, "two frames cannot confirm identity");
+Assert(names.ObserveFrame(goodName, 3).Single().Name == "정확이름", "third consistent frame confirms identity");
+names.Reset();
+names.ObserveFrame(goodName, 3);
+names.ObserveFrame([], 3);
+Assert(names.ObserveFrame(goodName, 3).Count == 0 && names.ObserveFrame(goodName, 3).Count == 0, "missing frame breaks consecutive evidence");
+Assert(names.ObserveFrame(goodName, 3).Count == 1, "confirmation resumes after three fresh frames");
+names.Reset();
+for (var frame = 0; frame < 5; frame++)
+    Assert(names.ObserveFrame([(0, "잘못이름", 0.30f)], 3).Count == 0, "low confidence never confirms frame " + frame);
+names.Reset();
+names.ObserveFrame(goodName, 3);
+names.ObserveFrame([(0, "정확이름", float.NaN)], 3);
+Assert(names.ObserveFrame(goodName, 3).Count == 0 && names.ObserveFrame(goodName, 3).Count == 0, "invalid confidence breaks evidence");
+names.Reset();
+Assert(names.ObserveFrame([goodName[0], goodName[0], goodName[0]], 3).Count == 0, "duplicate observations count as one frame");
+names.ObserveFrame([(0, "정확이름", 0.93f), (0, "다른이름", 0.93f)], 3);
+Assert(names.ObserveFrame(goodName, 3).Count == 0 && names.ObserveFrame(goodName, 3).Count == 0, "conflicting observations break evidence");
+names.Reset();
+for (var frame = 0; frame < 3; frame++) names.ObserveFrame([(1, "봇이름", 0.99f)], 1);
+Assert(names.ObserveFrame([(1, "봇이름", 0.99f)], 1).Count == 0, "AI roster ignores extra slots");
+names.ObserveFrame(goodName, 3);
+names.Reset();
+Assert(names.ObserveFrame(goodName, 3).Count == 0, "new match drops pending identity evidence");
 Console.WriteLine($"{count} checks passed. HTTP fixtures only; no live API verification.");
 
 /** 외부 통신 없는 고정 API 응답 */

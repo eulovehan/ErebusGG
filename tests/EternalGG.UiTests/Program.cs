@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using EternalGG.App;
 using EternalGG.App.ViewModels;
 using EternalGG.Core;
+using EternalGG.App.Services;
 
 /** 외부 통신 없는 화면 상태와 배치 검증 */
 internal static class Program
@@ -19,6 +20,7 @@ internal static class Program
     private static void Main(string[] args)
     {
         if (args.Contains("--attention-preview")) { RunAttentionPreview(); return; }
+        if (args.FirstOrDefault() == "--ocr-image") { RunOcrImage(args); return; }
         var app = new App();
         app.InitializeComponent();
         var errors = new StringWriter();
@@ -77,8 +79,8 @@ internal static class Program
         vm.Ranked = !vm.Ranked;
         Assert(!card.HasStats, "mode change separates previous statistics");
         card.Reset();
-        card.SetDetectedName("등록이름");
-        card.Source = "등록한 이름 / 확인 필요";
+        card.SetRegisteredName("등록이름");
+        Assert(!card.HasConfirmedName, "registered name is not a screen confirmation");
         Assert(card.SetDetectedName("등록이름") && card.Source == "자동 확인", "registered name still requires screen confirmation");
         card.Reset();
         Assert(!card.UserEdited && card.SetDetectedName("새팀원"), "new match accepts detection");
@@ -122,10 +124,75 @@ internal static class Program
         vm.ObserveGameAttention(true, MatchPhase.Loading, 1, true, now.AddSeconds(3));
         Assert(alerts == 1 && vm.MatchOpen && vm.LatestNotice.Contains("새 매칭"), "single match window request navigates to current match");
         Assert(!window.IsVisible, "offscreen checks never show product window");
+
+        /** 일부 이름 누락 시 직접 입력 복구와 본인 이름 보호 검증 */
+        using var captureVm = new MainViewModel { SelfNickname = "" };
+        IReadOnlyList<OcrCandidate> partialNames = [new(0, "첫이름", 0.93f), new(2, "끝이름", 0.92f)];
+        for (var frame = 0; frame < 3; frame++) captureVm.ApplyNameFrame(partialNames);
+        Assert(captureVm.PlayerCount == "2 / 3" && captureVm.VisiblePlayers.Count == 3 && !captureVm.Players[1].HasName, "missing slot remains available for manual recovery");
+        window.DataContext = captureVm;
+        Layout(root, 980, 760);
+        Audit(root, 980);
+        if (output != null) Render(root, Path.Combine(output, "partial-roster-recovery.png"), 980, 760);
+        window.DataContext = vm;
+        captureVm.Players[1].Nickname = "수정이름";
+        for (var frame = 0; frame < 3; frame++) captureVm.ApplyNameFrame([new(1, "다른이름", 0.95f)]);
+        Assert(captureVm.Players[1].Nickname == "수정이름", "manual recovery survives later screen candidates");
+        using var ownVm = new MainViewModel { SelfNickname = "등록본인" };
+        ownVm.Players[0].SetRegisteredName(ownVm.SelfNickname);
+        for (var frame = 0; frame < 3; frame++) ownVm.ApplyNameFrame([new(0, "다른이름", 0.93f)]);
+        Assert(ownVm.Players[0].Nickname == "등록본인" && !ownVm.Players[0].ScreenVerified, "conflicting detection cannot replace registered identity");
+        for (var frame = 0; frame < 3; frame++) ownVm.ApplyNameFrame([new(0, "등록본인", 0.93f)]);
+        Assert(ownVm.Players[0].ScreenVerified, "registered identity needs independent screen evidence");
+        ownVm.Match.Reset();
+        foreach (var player in ownVm.Players) player.Reset();
+        Assert(ownVm.VisiblePlayers.Count == 0 && ownVm.EmptyTeam, "inactive reset roster returns to one empty state");
         PresentationTraceSources.DataBindingSource.Flush();
         Assert(errors.ToString().Length == 0, "no runtime binding errors");
         window.Close();
         Console.WriteLine(count + " UI checks passed. Offscreen fixtures only.");
+    }
+
+    /** 외부 파일을 보관하지 않는 실제 인식 이미지 회귀 검증 */
+    private static void RunOcrImage(string[] args)
+    {
+        if (args.Length < 2) throw new ArgumentException("--ocr-image path [expectedName ...]");
+        var expected = args.Skip(2).ToArray();
+        var watch = Stopwatch.StartNew();
+        using var image = new System.Drawing.Bitmap(args[1]);
+        using var ocr = new OcrService();
+        using var vm = new MainViewModel { SelfNickname = "" };
+        for (var frame = 0; frame < NicknameConsensus.RequiredFrames; frame++)
+        {
+            var candidates = ocr.Read(image, new AppSettings().SelectionRegions);
+            Console.WriteLine(ocr.Diagnostics);
+            Assert(candidates.Select(c => c.Name).SequenceEqual(expected), "real OCR candidates frame " + frame);
+            vm.ApplyNameFrame(candidates);
+            if (frame < NicknameConsensus.RequiredFrames - 1) Assert(vm.Players.All(p => !p.ScreenVerified), "no premature frame confirmation");
+        }
+
+        Assert(vm.Players.Take(expected.Length).Select(p => p.Nickname).SequenceEqual(expected), "image to displayed roster");
+        Assert(vm.Players.Take(expected.Length).All(p => p.ScreenVerified), "screen confirmation flags");
+        if (expected.Length == 0) Assert(vm.Players.All(p => !p.HasName), "negative screenshot never becomes a roster");
+        using var blank = new System.Drawing.Bitmap(image.Width, image.Height);
+        Assert(ocr.Read(blank, new AppSettings().SelectionRegions).Count == 0, "blank frame has no names");
+
+        /** 이름 띠가 없거나 왼쪽에 놓인 문자 오확정 제외 */
+        using var wrongPlace = new System.Drawing.Bitmap(image.Width, image.Height);
+        var region = new AppSettings().SelectionRegions[0];
+        var box = new System.Drawing.Rectangle((int)(region.X * image.Width), (int)(region.Y * image.Height), (int)(region.Width * image.Width), (int)(region.Height * image.Height));
+        using (var graphics = System.Drawing.Graphics.FromImage(wrongPlace))
+        {
+            graphics.Clear(System.Drawing.Color.FromArgb(20, 23, 30));
+            using var font = new System.Drawing.Font("Malgun Gothic", 10);
+            graphics.DrawString("바냐", font, System.Drawing.Brushes.White, box.Left + 3, box.Top + 2);
+        }
+
+        Assert(ocr.Read(wrongPlace, [region]).Count == 0, "non-nameplate text is not a player");
+        using (var graphics = System.Drawing.Graphics.FromImage(wrongPlace))
+            graphics.FillRectangle(System.Drawing.Brushes.LimeGreen, box.Left, box.Bottom - 2, box.Width, 2);
+        Assert(ocr.Read(wrongPlace, [region]).Count == 0, "left-aligned label is not a right-aligned nickname");
+        Console.WriteLine($"{count} image checks passed in {watch.ElapsedMilliseconds}ms. Static image only, no game or HTTP.");
     }
 
     /** 게임 감시 없는 실제 창 알림 검수 도구 */

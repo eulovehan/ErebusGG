@@ -4,17 +4,19 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 ## 실행
 
-`artifacts/win-x64/EternalGG.exe`를 실행한다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/tessdata 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
+`artifacts/win-x64-ocrfix-20261018/EternalGG.exe`를 실행한다. 2026-10-18 이름 인식 수정본은 실행 중인 기존 앱의 파일 잠금을 피해 별도 폴더에 생성했다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/tessdata 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
 .NET 런타임은 포함되어 있지만 Tesseract 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 공식 의존성 안내](https://github.com/charlesw/tesseract#dependencies).
 
 1. 앱을 먼저 실행한다.
 2. 이터널리턴에서 매칭을 시작한다.
 3. 캐릭터 선택/루트 선택 화면을 전경으로 유지한다.
-4. 팀원 이름이 두 번 일치하면 카드에 표시한다. AI 대전은 본인 1명만 확인한다.
+4. 명암 / 원색 인식 결과가 일치하고 세 프레임 연속 확인된 이름을 카드에 표시한다. AI 대전은 본인 1명만 확인한다.
 5. 조회 서비스를 사용할 수 없으면 이름을 유지하고 이용 불가 안내를 표시한다. 가짜 전적을 채우지 않는다.
 
 게임 중 다시 읽기는 앱에서 `Ctrl+R`을 누른 뒤 게임으로 돌아가 `Tab`의 게임 현황 화면을 연다. 앱은 게임 입력을 자동 조작하지 않는다.
+
+일부 이름이 누락되면 해당 팀원 카드에서 닉네임을 직접 입력할 수 있다. 등록한 본인 이름은 화면에서 확인되기 전까지 등록 이름으로 구분하며 다른 자동 후보가 덮어쓰지 않는다. [2026-10-18 이름 인식 개선 기록](docs/ocr-fix-2026-10-18.md)을 참고한다.
 
 - `Ctrl+R`: 40초 동안 이름 다시 읽기
 - `Ctrl+Enter`: 전적 조회
@@ -52,7 +54,7 @@ VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행�
 
 설정 파일: `%LOCALAPPDATA%/EternalGG/settings.json`. `SelectionRegions`와 `GameRegions`의 좌표는 게임 클라이언트 영역 대비 0~1 비율이다. 파일을 변경한 뒤 앱을 재실행한다.
 
-최신 실행 파일은 artifacts/win-x64/EternalGG.exe다. win-x64-neutral과 win-x64-chrome은 이전 검증 빌드다. 이번 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
+최신 이름 인식 수정본은 artifacts/win-x64-ocrfix-20261018/EternalGG.exe다. build.ps1의 일반 Publish 기본 출력은 artifacts/win-x64다. win-x64-neutral과 win-x64-chrome은 이전 검증 빌드다. 이번 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
 
 설계/출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
 
