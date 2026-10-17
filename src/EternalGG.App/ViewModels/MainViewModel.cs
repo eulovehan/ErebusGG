@@ -389,7 +389,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     if (Match.IsAi) regions = regions.Take(1).ToList();
                     return ocr.Read(screenshot, regions, Match.Phase != MatchPhase.InGame);
                 });
-                if (generation != Match.Generation) return;
+                if (disposed || generation != Match.Generation) return;
                 if (candidates == null)
                 {
                     names.Reset();
@@ -415,14 +415,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (DateTime.Now >= manualCaptureUntil && NameMessage.Contains("40초")) NameMessage = "이름 확인이 끝났어요. 잘못된 이름은 카드에서 수정할 수 있습니다.";
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or TesseractException or System.ComponentModel.Win32Exception)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or TesseractException or System.ComponentModel.Win32Exception or Microsoft.ML.OnnxRuntime.OnnxRuntimeException or DllNotFoundException or BadImageFormatException || e is TypeInitializationException { InnerException: DllNotFoundException })
         {
             names.Reset();
-            NameMessage = "이름을 확인하지 못했어요. 전적 검색에서 닉네임을 직접 입력할 수 있습니다.";
+            NameMessage = "이름을 확인하지 못했어요. 팀원 카드에 닉네임을 직접 입력할 수 있습니다.";
             OcrStatus = "인식 환경 확인 필요";
             if (Events.FirstOrDefault()?.Contains("환경 오류") != true) AddEvent("환경 오류 / " + e.GetType().Name);
         }
-        finally { ticking = false; }
+        finally
+        {
+            ticking = false;
+            if (disposed) ocr.Dispose();
+        }
     }
 
     /** 매칭 단계별 화면 문구 갱신 */
@@ -465,10 +469,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /** 비동기 작업 취소 및 연결 자원 해제 */
     public void Dispose()
     {
+        if (disposed) return;
         disposed = true;
         lifetime.Cancel();
         logs.Dispose();
         http.Dispose();
         lifetime.Dispose();
+
+        /** 진행 중인 인식 종료 후 네이티브 자원 해제 */
+        if (!ticking) ocr.Dispose();
     }
 }

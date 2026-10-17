@@ -11,6 +11,8 @@
     <ProjectReference Include="..\EternalGG.Core\EternalGG.Core.csproj" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Tesseract" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+    <Content Include="models\*.onnx;models\manifest.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="tessdata\*.traineddata" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\licenses\*" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />

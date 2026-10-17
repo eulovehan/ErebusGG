@@ -4,19 +4,21 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 ## 실행
 
-`artifacts/win-x64-ocrfix-20261018/EternalGG.exe`를 실행한다. 2026-10-18 이름 인식 수정본은 실행 중인 기존 앱의 파일 잠금을 피해 별도 폴더에 생성했다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/tessdata 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
+`artifacts/win-x64-multilang-20261018/EternalGG.exe`를 실행한다. 2026-10-18 다국어 인식 수정본은 별도 폴더에 생성했다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/models/tessdata/licenses 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
-.NET 런타임은 포함되어 있지만 Tesseract 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 공식 의존성 안내](https://github.com/charlesw/tesseract#dependencies).
+.NET 런타임은 포함되어 있지만 Tesseract와 ONNX Runtime 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 의존성](https://github.com/charlesw/tesseract#dependencies), [ONNX Runtime 전제 조건](https://onnxruntime.ai/docs/install/#requirements).
 
 1. 앱을 먼저 실행한다.
 2. 이터널리턴에서 매칭을 시작한다.
 3. 캐릭터 선택/루트 선택 화면을 전경으로 유지한다.
-4. 명암 / 원색 인식 결과가 일치하고 세 프레임 연속 확인된 이름을 카드에 표시한다. AI 대전은 본인 1명만 확인한다.
+4. 여러 인식 결과를 비교하고 세 프레임 연속 확인된 이름을 카드에 표시한다. AI 대전은 본인 1명만 확인한다.
 5. 조회 서비스를 사용할 수 없으면 이름을 유지하고 이용 불가 안내를 표시한다. 가짜 전적을 채우지 않는다.
 
 게임 중 다시 읽기는 앱에서 `Ctrl+R`을 누른 뒤 게임으로 돌아가 `Tab`의 게임 현황 화면을 연다. 앱은 게임 입력을 자동 조작하지 않는다.
 
 일부 이름이 누락되면 해당 팀원 카드에서 닉네임을 직접 입력할 수 있다. 등록한 본인 이름은 화면에서 확인되기 전까지 등록 이름으로 구분하며 다른 자동 후보가 덮어쓰지 않는다. [2026-10-18 이름 인식 개선 기록](docs/ocr-fix-2026-10-18.md)을 참고한다.
+
+한국어, 일본어, 영어, 중국어 간체/번체, 숫자는 동봉한 로컬 모델로 확인한다. 새 첨부 화면의 가운데 이름 MikonS2와 합성 다국어 이름 21개를 검증했다. 실제 모든 게임 화면의 정확도를 보장하지 않으며, [다국어 인식 개선 기록](docs/ocr-multilingual-2026-10-18.md)에 표본과 제한을 구분했다. Python, 유료 OCR API, 실행 중 모델 다운로드는 필요 없다.
 
 - `Ctrl+R`: 40초 동안 이름 다시 읽기
 - `Ctrl+Enter`: 전적 조회
@@ -37,6 +39,8 @@ SDK는 `global.json`의 버전으로 고정한다. 프로젝트 전용 SDK는 `.
 
 Test는 Core 계약 / 알림 정책 테스트와 WPF 오프스크린 상태 / 배치 검증을 실행한다. 오프스크린 검증은 실제 사용자 조작이나 실게임 검증을 대신하지 않는다.
 
+실제 다국어 모델의 합성 이미지 회귀 검사는 `./.tools/dotnet/dotnet.exe run --project tests/EternalGG.UiTests -c Release -- --ocr-languages`로 실행한다. 검사에 사용하는 Windows 글꼴은 다국어 개선 기록을 참고한다.
+
 코드 또는 중앙 패키지 버전을 바꿔 의존성 잠금 갱신이 필요할 때만 `dotnet restore --force-evaluate`를 사용하고 잠금 파일 변경을 검토한다. 일반 빌드는 `--locked-mode`를 사용한다.
 
 VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행한다. 프로젝트 전용 SDK 환경으로 편집기를 열며, 터미널에서는 `.\open-vscode.ps1`도 사용할 수 있다. 다른 경로로 프로젝트를 옮기거나 새로 받은 경우 먼저 `.\bootstrap.ps1`을 실행한다. 제공된 Build/Test/Publish 작업을 사용할 수 있다. Visual Studio에서는 `EternalGG.sln`을 연다.
@@ -54,7 +58,7 @@ VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행�
 
 설정 파일: `%LOCALAPPDATA%/EternalGG/settings.json`. `SelectionRegions`와 `GameRegions`의 좌표는 게임 클라이언트 영역 대비 0~1 비율이다. 파일을 변경한 뒤 앱을 재실행한다.
 
-최신 이름 인식 수정본은 artifacts/win-x64-ocrfix-20261018/EternalGG.exe다. build.ps1의 일반 Publish 기본 출력은 artifacts/win-x64다. win-x64-neutral과 win-x64-chrome은 이전 검증 빌드다. 이번 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
+최신 이름 인식 수정본은 artifacts/win-x64-multilang-20261018/EternalGG.exe다. build.ps1의 일반 Publish 기본 출력은 artifacts/win-x64다. ocrfix, win-x64-neutral, win-x64-chrome은 이전 검증 빌드다. 과거 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
 
 설계/출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
 

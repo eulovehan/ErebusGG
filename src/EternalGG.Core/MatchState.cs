@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace EternalGG.Core;
@@ -77,9 +78,9 @@ public static partial class NicknameRules
     /** 인식 공백 제거 및 화면 문구 제외 */
     public static string? Normalize(string raw)
     {
-        var value = raw.Trim().Replace(" ", "");
+        var value = string.Concat(raw.Normalize(NormalizationForm.FormC).Where(c => !char.IsWhiteSpace(c)));
         if (!ValidName().IsMatch(value)) return null;
-        if (new[] { "플레이어", "매칭", "준비", "팀원", "실험체", "선택", "스쿼드", "BOT", "Bot", "AI" }.Any(value.Contains)) return null;
+        if (new[] { "플레이어", "매칭", "준비", "팀원", "팀원선택", "실험체", "선택", "스쿼드", "BOT", "Bot", "AI" }.Contains(value)) return null;
         return value;
     }
 }

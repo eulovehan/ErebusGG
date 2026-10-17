@@ -47,6 +47,12 @@ Assert(NicknameRules.Normalize("Player123") == "Player123", "mixed Latin nicknam
 Assert(NicknameRules.Normalize("팀원 선택") == null, "UI text rejected");
 Assert(NicknameRules.Normalize("name?invalid") == null, "invalid OCR punctuation rejected");
 
+/** 다국어와 숫자 및 조합형 유니코드 보존 검증 */
+foreach (var nickname in new[] { "さくら123", "カタカナ42", "测试玩家8", "測試玩家8", "123456", "SAIKO123", "봄Sakura7" })
+    Assert(NicknameRules.Normalize(nickname) == nickname, "supported script preserved " + nickname);
+Assert(NicknameRules.Normalize("달빛123".Normalize(NormalizationForm.FormD)) == "달빛123", "decomposed Hangul recomposes before validation");
+Assert(NicknameRules.Normalize("さ\tく\u3000ら123\r\n") == "さくら123", "multilingual OCR whitespace is removed");
+
 /** 키 누락 시 네트워크 차단 검증 */
 var handler = new FakeHandler();
 var api = new EternalReturnApi(new HttpClient(handler));

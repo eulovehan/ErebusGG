@@ -13,10 +13,12 @@ public sealed record NameRegion(double X, double Y, double Width, double Height)
 /** 슬롯별 이름 인식 후보 */
 public sealed record OcrCandidate(int Slot, string Name, float Confidence);
 
-/** 한국어와 영어 로컬 이름 인식 */
+/** 한국어와 일본어 및 영중문 로컬 이름 인식 */
 public sealed class OcrService : IDisposable
 {
     private TesseractEngine? engine;
+    private TesseractEngine? koreanVerifier;
+    private readonly PaddleNicknameRecognizer multilingual = new();
     public string Diagnostics { get; private set; } = "아직 읽지 않음";
 
     /** 이름 띠와 두 전처리 결과가 일치한 후보 추출 */
@@ -57,8 +59,23 @@ public sealed class OcrService : IDisposable
             var gray = Recognize(screenshot, ink, true, 3);
             var color = Recognize(screenshot, ink, false, 4);
             diagnostics.Add($"영역 {i + 1}: 명암 {gray.Name ?? "없음"} / {gray.Confidence:0.00}, 원색 {color.Name ?? "없음"} / {color.Confidence:0.00}");
-            if (gray.Name != null && gray.Name == color.Name && Math.Min(gray.Confidence, color.Confidence) >= NicknameConsensus.MinimumConfidence)
-                candidates.Add(new(i, gray.Name, Math.Min(gray.Confidence, color.Confidence)));
+
+            /** 다국어 모델 검증과 독립 인식 증거의 충돌 해소 */
+            var corroboration = gray.Name != null && gray.Name == color.Name && Math.Min(gray.Confidence, color.Confidence) >= NicknameConsensus.MinimumConfidence ? gray.Name : null;
+            var verified = multilingual.Read(screenshot, ink, corroboration);
+            diagnostics.Add($"영역 {i + 1} 다국어: {verified.Detail}");
+
+            /** 한국어 받침 충돌 시 다른 학습 모델의 독립 재검증 */
+            if (verified.Name != corroboration && corroboration != null && corroboration.Any(c => c is >= '\uac00' and <= '\ud7a3') && (verified.Name == null || verified.Name.Any(c => c is >= '\uac00' and <= '\ud7a3')))
+            {
+                koreanVerifier ??= new TesseractEngine(Path.Combine(AppContext.BaseDirectory, "tessdata"), "kor_best+eng", EngineMode.LstmOnly);
+                var extraGray = Recognize(screenshot, ink, true, 3, koreanVerifier);
+                var extraColor = Recognize(screenshot, ink, false, 4, koreanVerifier);
+                diagnostics.Add($"영역 {i + 1} 한국어 재검증: {extraGray.Name ?? "없음"} / {extraGray.Confidence:0.00}, {extraColor.Name ?? "없음"} / {extraColor.Confidence:0.00}");
+                if (extraGray.Name == corroboration && extraColor.Name == corroboration && Math.Min(extraGray.Confidence, extraColor.Confidence) >= 0.90f)
+                    candidates.Add(new(i, corroboration, Math.Min(extraGray.Confidence, extraColor.Confidence)));
+            }
+            else if (verified.Name != null) candidates.Add(new(i, verified.Name, verified.Confidence));
         }
 
         Diagnostics = string.Join(" / ", diagnostics);
@@ -89,6 +106,29 @@ public sealed class OcrService : IDisposable
     /** 중립색 글자의 실제 외곽 탐색 */
     private static Rectangle FindInk(Bitmap image, Rectangle box)
     {
+        /** 오른쪽 이름과 멀리 떨어진 카드 구분선 분리 */
+        var gap = 0;
+        var start = box.Right;
+        var found = false;
+        for (var x = box.Right - 1; x >= box.Left; x--)
+        {
+            var hasInk = false;
+            for (var y = box.Top; y < box.Bottom; y++)
+            {
+                var c = image.GetPixel(x, y);
+                if (Math.Min(c.R, Math.Min(c.G, c.B)) >= 130 && Math.Max(c.R, Math.Max(c.G, c.B)) - Math.Min(c.R, Math.Min(c.G, c.B)) <= 50)
+                {
+                    hasInk = true;
+                    break;
+                }
+            }
+
+            if (hasInk) { found = true; gap = 0; start = x; }
+            else if (found && ++gap > Math.Max(6, box.Height / 2)) break;
+        }
+
+        if (!found) return Rectangle.Empty;
+        box = Rectangle.FromLTRB(start, box.Top, box.Right, box.Bottom);
         var left = box.Right;
         var top = box.Bottom;
         var right = box.Left - 1;
@@ -112,7 +152,7 @@ public sealed class OcrService : IDisposable
     }
 
     /** 글자 가장자리를 보존하는 명암 변환과 확대 */
-    private (string? Name, float Confidence) Recognize(Bitmap image, Rectangle ink, bool grayscale, int scale)
+    private (string? Name, float Confidence) Recognize(Bitmap image, Rectangle ink, bool grayscale, int scale, TesseractEngine? recognizer = null)
     {
         using var text = new Bitmap(ink.Width, ink.Height, PixelFormat.Format24bppRgb);
         for (var y = 0; y < ink.Height; y++)
@@ -143,10 +183,15 @@ public sealed class OcrService : IDisposable
         using var buffer = new MemoryStream();
         crop.Save(buffer, System.Drawing.Imaging.ImageFormat.Png);
         using var pix = Pix.LoadFromMemory(buffer.ToArray());
-        using var page = engine!.Process(pix, PageSegMode.SingleLine);
+        using var page = (recognizer ?? engine!).Process(pix, PageSegMode.SingleLine);
         return (NicknameRules.Normalize(page.GetText()), page.GetMeanConfidence());
     }
 
     /** 네이티브 인식 엔진 해제 */
-    public void Dispose() => engine?.Dispose();
+    public void Dispose()
+    {
+        engine?.Dispose();
+        koreanVerifier?.Dispose();
+        multilingual.Dispose();
+    }
 }

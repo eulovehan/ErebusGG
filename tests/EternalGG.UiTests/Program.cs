@@ -21,6 +21,7 @@ internal static class Program
     {
         if (args.Contains("--attention-preview")) { RunAttentionPreview(); return; }
         if (args.FirstOrDefault() == "--ocr-image") { RunOcrImage(args); return; }
+        if (args.FirstOrDefault() == "--ocr-languages") { RunOcrLanguages(args); return; }
         var app = new App();
         app.InitializeComponent();
         var errors = new StringWriter();
@@ -193,6 +194,59 @@ internal static class Program
             graphics.FillRectangle(System.Drawing.Brushes.LimeGreen, box.Left, box.Bottom - 2, box.Width, 2);
         Assert(ocr.Read(wrongPlace, [region]).Count == 0, "left-aligned label is not a right-aligned nickname");
         Console.WriteLine($"{count} image checks passed in {watch.ElapsedMilliseconds}ms. Static image only, no game or HTTP.");
+    }
+
+    /** 다국어와 숫자 및 구분선이 포함된 합성 이름 띠 회귀 검증 */
+    private static void RunOcrLanguages(string[] args)
+    {
+        using var ocr = new OcrService();
+        var failures = new List<string>();
+        var samples = new[]
+        {
+            (Font: "Malgun Gothic", Names: new[] { "이하링", "달빛123", "하늘소리7" }),
+            (Font: "Yu Gothic", Names: new[] { "さくら123", "カタカナ42", "あおぞら7" }),
+            (Font: "Microsoft YaHei", Names: new[] { "星空123", "测试玩家8", "永恒回归9" }),
+            (Font: "Microsoft JhengHei", Names: new[] { "星光123", "測試玩家8", "永恆回歸9" }),
+            (Font: "Segoe UI", Names: new[] { "MikonS2", "momoka", "Player123" }),
+            (Font: "Malgun Gothic", Names: new[] { "봄Sakura7", "さくらStar2", "星光GG123" }),
+            (Font: "Segoe UI", Names: new[] { "123456", "20261018", "987654" })
+        };
+        foreach (var sample in samples)
+        {
+            using var image = new System.Drawing.Bitmap(1920, 1080);
+            using (var graphics = System.Drawing.Graphics.FromImage(image))
+            using (var font = new System.Drawing.Font(sample.Font, 16, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Pixel))
+            using (var format = (System.Drawing.StringFormat)System.Drawing.StringFormat.GenericTypographic.Clone())
+            {
+                Assert(font.FontFamily.GetName(0x0409) == sample.Font, "requested fixture font available " + sample.Font);
+                graphics.Clear(System.Drawing.Color.FromArgb(35, 38, 43));
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                format.Alignment = System.Drawing.StringAlignment.Far;
+                var regions = new AppSettings().SelectionRegions;
+                for (var slot = 0; slot < regions.Count; slot++)
+                {
+                    var r = regions[slot];
+                    var box = new System.Drawing.Rectangle((int)(r.X * image.Width), (int)(r.Y * image.Height), (int)(r.Width * image.Width), (int)(r.Height * image.Height));
+                    graphics.FillRectangle(System.Drawing.Brushes.DeepSkyBlue, box.Left, box.Bottom - 2, box.Width, 2);
+                    graphics.FillRectangle(System.Drawing.Brushes.White, box.Left + 2, box.Top + 3, 1, 13);
+                    graphics.DrawString(sample.Names[slot], font, System.Drawing.Brushes.White, new System.Drawing.PointF(box.Right - 3, box.Top - 2), format);
+                }
+            }
+
+            if (args.Length > 1)
+            {
+                Directory.CreateDirectory(args[1]);
+                image.Save(Path.Combine(args[1], sample.Names[0] + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+            }
+
+            var result = ocr.Read(image, new AppSettings().SelectionRegions);
+            Console.WriteLine(ocr.Diagnostics);
+            if (!result.Select(c => c.Name).SequenceEqual(sample.Names)) failures.Add(string.Join(" / ", sample.Names));
+            else Assert(true, "actual OCR synthetic names " + string.Join(" / ", sample.Names));
+        }
+
+        Assert(failures.Count == 0, "all language fixtures " + string.Join("; ", failures));
+        Console.WriteLine(count + " multilingual checks passed. Synthetic fixtures only, no game or HTTP.");
     }
 
     /** 게임 감시 없는 실제 창 알림 검수 도구 */
