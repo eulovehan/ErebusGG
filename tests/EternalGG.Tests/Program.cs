@@ -13,6 +13,19 @@ void Assert(bool condition, string label)
     count++;
 }
 
+/** 최근 랭크의 최신 스무 경기와 중복 및 모드 분리 검증 */
+var rankedTime = DateTimeOffset.UtcNow;
+var rankedGames = Enumerable.Range(0, 24).Select(i => new RankedMatch(i.ToString(), rankedTime.AddMinutes(-i), i % 3 == 0 ? "아디나" : i % 3 == 1 ? "リオ" : "星光", i % 4 == 0 ? 1 : 4)).ToList();
+rankedGames.Add(rankedGames[0]);
+rankedGames.Add(new("normal", rankedTime.AddHours(1), "제외", 1, 2));
+rankedGames.Add(new("solo", rankedTime.AddHours(1), "제외", 1, 3, 1));
+rankedGames.Add(new("invalid", rankedTime.AddHours(1), "제외", 0));
+var rankedSample = RecentRanked.FromGames(rankedGames.AsEnumerable().Reverse());
+Assert(rankedSample.Games == 20 && rankedSample.Wins == 5 && rankedSample.WinRate == "25%", "ranked latest twenty excludes duplicates and other modes");
+Assert(rankedSample.MostPicks.Count == 3 && rankedSample.MostPicks[0].Character == "아디나" && rankedSample.MostPicks.Sum(p => p.Games) == 20, "most picks share the same sample with deterministic ties");
+Assert(RecentRanked.FromGames(rankedGames.Take(3)).Summary == "3경기 / 1승 2패", "small sample reports actual count");
+Assert(RecentRanked.FromGames([]).WinRate == "—", "empty ranked sample has no fabricated rate");
+
 /** AI 매칭과 재진입 상태 검증 */
 var state = new MatchState();
 state.Apply("[GlobalUserData:SetMatchingMode:142] Invoked: Test");

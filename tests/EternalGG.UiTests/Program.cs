@@ -19,6 +19,7 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (args.Contains("--brand-preview")) { RunBrandPreview(); return; }
         if (args.Contains("--attention-preview")) { RunAttentionPreview(); return; }
         if (args.FirstOrDefault() == "--ocr-image") { RunOcrImage(args); return; }
         if (args.FirstOrDefault() == "--ocr-languages") { RunOcrLanguages(args); return; }
@@ -47,6 +48,26 @@ internal static class Program
             }
         }
 
+        /** 최근 랭크 화면의 전체 및 소표본과 기록 없음 검증 */
+        vm.NavigateCommand.Execute("match");
+        vm.GameStatus = "예시 데이터 / 게임 연결 없음";
+        vm.PhaseTitle = "이번 팀을 확인하세요";
+        FillBrandFixture(vm);
+        Assert(vm.Players[0].RankedWinRate == "25%" && vm.Players[0].MostPicks.Count == 3, "recent ranked sample and three picks");
+        Assert(vm.Players[1].RankedSummary == "8경기 / 2승 6패", "partial sample uses actual denominator");
+        Assert(vm.Players[2].RankedWinRate == "—" && vm.Players[2].RankedSummary == "랭크 기록 없음", "no ranked records are not zero winrate");
+        foreach (var width in new[] { 832, 980, 1160, 1248 })
+        {
+            Layout(root, width, 910);
+            Audit(root, width);
+            if (output != null) Render(root, Path.Combine(output, $"brand-team-{width}.png"), width, 910);
+        }
+        vm.Players[0].Apply(new(null, "잠시 후 다시 조회해 주세요"));
+        Assert(vm.Players[0].RankedWinRate == "25%" && vm.Players[0].FetchedAt.StartsWith("이전 조회 결과"), "ranked refresh failure preserves marked result");
+        vm.Players[0].Nickname = "새이름";
+        Assert(vm.Players[0].RankedWinRate == "—" && vm.Players[0].MostPicks.Count == 0, "name edit clears ranked sample");
+        foreach (var player in vm.Players) player.Reset();
+
         /** 빈 검색과 조회 불가 상태의 현재 팀 보존 검증 */
         vm.NavigateCommand.Execute("search");
         vm.SearchNickname = "";
@@ -59,6 +80,7 @@ internal static class Program
         Assert(vm.SearchHasResult && vm.SearchPlayer.Nickname == "검증검색" && vm.Players[0].Nickname == "검증팀원", "search does not mutate roster");
         Assert(vm.SearchOpen && !vm.DeveloperMode && !vm.SearchPlayer.HasStats && vm.SearchPlayer.Status.Contains("사용할 수 없어요"), "unavailable service stays on task");
         Assert(!vm.ShowSearchService, "search failure explanation appears only once");
+        Assert(vm.SearchPlayer.RankedSummary == "기록 미제공" && !vm.SearchPlayer.DisplayStatus.Contains("대기"), "failed lookup never remains pending");
         vm.SearchNickname = "다른검색";
         Assert(!vm.SearchHasResult && vm.ShowSearchService, "edited query hides previous result");
 
@@ -75,6 +97,7 @@ internal static class Program
         Assert(card.Revision > revision, "name edit and revert invalidates response");
         var fixture = new PlayerStats("직접수정", "fixture", 20, 4, 1200, 3.5, "2위 / 4위", DateTimeOffset.Now);
         card.Apply(new(fixture, "전적 조회 완료"));
+        Assert(card.RankedWinRate == "—" && card.RankedSummary == "최근 랭크 기록 미제공", "season stats never masquerade as recent twenty");
         card.Apply(new(null, "잠시 후 다시 조회해 주세요"));
         Assert(card.HasStats && card.Games == "20" && card.FetchedAt.StartsWith("이전 조회 결과"), "failed refresh preserves marked previous result");
         vm.Ranked = !vm.Ranked;
@@ -313,6 +336,34 @@ internal static class Program
 
         Assert(failures.Count == 0, "all language fixtures " + string.Join("; ", failures));
         Console.WriteLine(count + " multilingual checks passed. Synthetic fixtures only, no game or HTTP.");
+    }
+
+    /** 실제 통신과 게임 감시 없는 브랜딩 검수 창 */
+    private static void RunBrandPreview()
+    {
+        var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/EternalGG;component/Themes/Neutral.xaml", UriKind.Relative) });
+        var vm = new MainViewModel { ApiKey = "", GameStatus = "예시 데이터 / 게임 연결 없음", PhaseTitle = "이번 팀을 확인하세요", LatestNotice = "브랜딩 검수용 화면" };
+        vm.NavigateCommand.Execute("match");
+        FillBrandFixture(vm);
+        var window = new MainWindow(vm, false) { Title = "[브랜딩 검수] EternalGG / 게임 감시 없음" };
+        app.Run(window);
+    }
+
+    /** 전체와 소표본 및 빈 결과의 독립 검수 데이터 */
+    private static void FillBrandFixture(MainViewModel vm)
+    {
+        var nicknames = new[] { "별빛산책", "Sakura123", "星光GG7" };
+        var characters = new[] { "아디나", "리오", "이바" };
+        for (var slot = 0; slot < 3; slot++)
+        {
+            var card = vm.Players[slot];
+            card.Reset();
+            card.SetDetectedName(nicknames[slot], 0.94f - slot * 0.2f);
+            var length = slot == 0 ? 20 : slot == 1 ? 8 : 0;
+            var games = Enumerable.Range(0, length).Select(i => new RankedMatch($"preview-{slot}-{i}", DateTimeOffset.Now.AddMinutes(-i * 30), characters[(i / 3) % 3], i % 4 == 0 ? 1 : 4));
+            card.Apply(new(new PlayerStats(card.Nickname, "preview-only", 80, 16, 2400, 3.6, "", DateTimeOffset.Now, RecentRanked.FromGames(games), "예시 시즌 / 랭크 스쿼드"), ""));
+        }
     }
 
     /** 게임 감시 없는 실제 창 알림 검수 도구 */

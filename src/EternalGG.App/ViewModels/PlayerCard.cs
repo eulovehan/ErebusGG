@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EternalGG.Core;
@@ -9,18 +10,31 @@ public partial class PlayerCard : ObservableObject
 {
     [ObservableProperty] private string nickname = "";
     [ObservableProperty] private string source = "이름 확인 대기";
-    [ObservableProperty] private string status = "자동 확인되지 않으면 닉네임을 직접 입력해 주세요";
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(DisplayStatus))] private string status = "자동 확인되지 않으면 닉네임을 직접 입력해 주세요";
     [ObservableProperty] private string mmr = "—";
     [ObservableProperty] private string games = "—";
     [ObservableProperty] private string winRate = "—";
     [ObservableProperty] private string averageRank = "—";
     [ObservableProperty] private string recent = "";
+    [ObservableProperty] private string seasonScope = "";
     [ObservableProperty] private bool hasStats;
+
+    /** 최근 랭크 표본의 화면 상태 */
+    [ObservableProperty] private double rankedPercent;
+    [ObservableProperty] private string rankedWinRate = "—";
+    [ObservableProperty] private string rankedSummary = "전적 조회 대기";
+    [ObservableProperty] private string picksSummary = "전적을 조회하면 표시됩니다";
+    public ObservableCollection<MostPick> MostPicks { get; } = [];
+
+    /** 이름 확인과 카드 식별 상태 */
     [ObservableProperty] private bool hasSlot;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasConfirmedName))] private bool screenVerified;
     [ObservableProperty] private bool needsNameConfirmation;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ConfidenceGrade)), NotifyPropertyChangedFor(nameof(ConfidenceLabel)), NotifyPropertyChangedFor(nameof(HasRecognitionConfidence))] private float? recognitionConfidence;
     [ObservableProperty] private string fetchedAt = "";
+
+    /** 중복 대기 안내를 제외한 작업 결과 */
+    public string DisplayStatus => Status is "전적 조회 대기" or "전적 조회 완료" ? "" : Status;
     public string Label { get; init; } = "ALLY";
     public bool HasName => !string.IsNullOrWhiteSpace(Nickname);
     public bool IsReadOnly { get; init; }
@@ -122,8 +136,13 @@ public partial class PlayerCard : ObservableObject
     public void ClearStats()
     {
         Mmr = Games = WinRate = AverageRank = "—";
-        Recent = FetchedAt = "";
+        Recent = FetchedAt = SeasonScope = "";
         HasStats = false;
+        RankedPercent = 0;
+        RankedWinRate = "—";
+        RankedSummary = "전적 조회 대기";
+        PicksSummary = "전적을 조회하면 표시됩니다";
+        MostPicks.Clear();
     }
 
     /** 공식 조회 결과의 카드 표시 반영 */
@@ -132,6 +151,7 @@ public partial class PlayerCard : ObservableObject
         Status = result.Message;
         if (result.Stats is not { } stats)
         {
+            if (!HasStats) { RankedSummary = "기록 미제공"; PicksSummary = "표시할 기록이 없습니다"; }
             if (HasStats) FetchedAt = "이전 조회 결과 / " + FetchedAt.Replace("이전 조회 결과 / ", "");
             return;
         }
@@ -143,5 +163,14 @@ public partial class PlayerCard : ObservableObject
         WinRate = stats.Games == 0 ? "—" : $"{100.0 * stats.Wins / stats.Games:0.0}%";
         AverageRank = stats.AverageRank.ToString("0.0") + "위";
         Recent = stats.Recent;
+        SeasonScope = stats.SeasonScope;
+
+        /** 시즌 통계와 최근 랭크 표본의 분리 */
+        RankedPercent = stats.RecentRanked is { Games: > 0 } ranked ? 100.0 * ranked.Wins / ranked.Games : 0;
+        RankedWinRate = stats.RecentRanked?.WinRate ?? "—";
+        RankedSummary = stats.RecentRanked?.Summary ?? "최근 랭크 기록 미제공";
+        MostPicks.Clear();
+        foreach (var pick in stats.RecentRanked?.MostPicks ?? []) MostPicks.Add(pick);
+        PicksSummary = MostPicks.Count > 0 ? "" : stats.RecentRanked is { Games: 0 } ? "플레이한 캐릭터가 없습니다" : "캐릭터 기록 미제공";
     }
 }
