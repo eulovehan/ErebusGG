@@ -70,6 +70,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool CanTeamLookup => VisiblePlayers.Any(p => p.HasName) && !IsLookupBusy;
     public bool CanSearch => !IsLookupBusy;
     public string LookupLabel => IsLookupBusy ? "불러오는 중…" : "전적 조회";
+    public string VersionLabel => $"EternalGG / v{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
     private int queryVersion;
     public bool HelpOpen { get => CurrentPage == "help"; set { if (value) CurrentPage = "help"; else if (HelpOpen) CurrentPage = "match"; } }
     [ObservableProperty] private string settingsMessage = "";
@@ -197,7 +198,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (GameCapture.FindGame() == 0) { NameMessage = "이터널리턴을 실행한 뒤 이름을 다시 확인해 주세요"; return; }
         manualCaptureUntil = DateTime.Now.AddSeconds(40);
-        names.Reset();
+        ResetAutomaticNames();
         NameMessage = OcrStatus = "게임을 앞으로 가져오세요. 40초 동안 이름을 다시 확인합니다.";
         AddEvent("40초 동안 이름 확인 / 게임을 전경으로 전환해 주세요");
     }
@@ -303,6 +304,56 @@ public partial class MainViewModel : ObservableObject, IDisposable
         return added;
     }
 
+    /** 직접 입력을 보존하는 자동 이름 재확인 준비 */
+    public void ResetAutomaticNames()
+    {
+        names.Reset();
+        foreach (var player in Players.Where(p => !p.UserEdited)) player.Reset();
+        if (!Players[0].UserEdited && !string.IsNullOrWhiteSpace(SelfNickname)) Players[0].SetRegisteredName(SelfNickname);
+        if (Players.All(p => !p.HasStats)) LastUpdated = "아직 조회하지 않음";
+        OcrDiagnostic = "다시 확인 대기";
+        NotifyTeam();
+    }
+
+    /** 로그 한 줄의 새 매칭과 이름 확인 구간 반영 */
+    public void ApplyGameLog(string line)
+    {
+        var oldGeneration = Match.Generation;
+        if (!Match.Apply(line)) return;
+        ModeLabel = Match.Mode;
+        AddEvent("상태 변경 / " + Match.Phase + " / " + Match.Mode);
+        if (oldGeneration != Match.Generation) ClearTeam();
+        if (Match.Phase is MatchPhase.Matched or MatchPhase.Loading) StartNameCapture();
+        if (Match.Phase is MatchPhase.Lobby or MatchPhase.Finished) captureUntil = DateTime.MinValue;
+        if (Match.Phase == MatchPhase.InGame)
+        {
+            captureUntil = DateTime.MinValue;
+            if (NameMessage.Length == 0 && !Players.Take(Match.IsAi ? 1 : 3).All(p => p.HasConfirmedName))
+                NameMessage = "확인되지 않은 팀원은 닉네임을 입력하거나 이름 다시 확인을 눌러 주세요";
+        }
+
+        if (Match.Phase == MatchPhase.Lobby) ClearTeam();
+        NotifyTeam();
+    }
+
+    /** 연결 시 현재 단계 복원과 선택 화면의 새 이름 확인 */
+    public void RestoreGameHistory(IEnumerable<string> lines)
+    {
+        foreach (var line in lines) Match.Apply(line);
+        ResetAutomaticNames();
+        captureUntil = manualCaptureUntil = DateTime.MinValue;
+        if (Match.Phase is MatchPhase.Matched or MatchPhase.Loading) StartNameCapture();
+        NotifyTeam();
+    }
+
+    /** 선택 화면의 인식 기간과 미확정 본인 이름 준비 */
+    private void StartNameCapture()
+    {
+        captureUntil = DateTime.Now.AddSeconds(120);
+        if (!Players[0].HasName && !Players[0].UserEdited && !string.IsNullOrWhiteSpace(SelfNickname))
+            Players[0].SetRegisteredName(SelfNickname);
+    }
+
     /** 게임 연결과 로그 및 인식 상태의 주기 갱신 */
     public async Task TickAsync()
     {
@@ -332,43 +383,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 using var stream = new FileStream(LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
-                foreach (var line in (await reader.ReadToEndAsync()).Split('\n'))
-                {
-                    Match.Apply(line);
-                }
+                RestoreGameHistory((await reader.ReadToEndAsync()).Split('\n'));
 
                 logs.Open(LogPath, true);
                 initial = false;
-                AddEvent("게임 로그 연결 / 과거 매칭 정보는 표시하지 않음");
+                AddEvent("게임 로그 연결 / 이름은 현재 화면에서 다시 확인");
             }
 
             /** 새 로그의 매칭 전환과 이름 확인 구간 반영 */
             LogStatus = File.Exists(LogPath) ? "연결됨" : "경로 확인 필요";
-            foreach (var line in logs.ReadNew(LogPath))
-            {
-                var oldGeneration = Match.Generation;
-                if (!Match.Apply(line)) continue;
-                ModeLabel = Match.Mode;
-                AddEvent("상태 변경 / " + Match.Phase + " / " + Match.Mode);
-                if (oldGeneration != Match.Generation) ClearTeam();
-                if (Match.Phase is MatchPhase.Matched or MatchPhase.Loading)
-                {
-                    captureUntil = DateTime.Now.AddSeconds(120);
-                    if (Players.All(p => !p.HasName) && !string.IsNullOrWhiteSpace(SelfNickname))
-                    {
-                        Players[0].SetRegisteredName(SelfNickname);
-                    }
-                }
-
-                if (Match.Phase is MatchPhase.Lobby or MatchPhase.Finished) captureUntil = DateTime.MinValue;
-                if (Match.Phase == MatchPhase.InGame)
-                {
-                    captureUntil = DateTime.MinValue;
-                    if (NameMessage.Length == 0 && !Players.Take(Match.IsAi ? 1 : 3).All(p => p.HasConfirmedName))
-                        NameMessage = "확인되지 않은 팀원은 닉네임을 입력하거나 이름 다시 확인을 눌러 주세요";
-                }
-                if (Match.Phase == MatchPhase.Lobby) ClearTeam();
-            }
+            foreach (var line in logs.ReadNew(LogPath)) ApplyGameLog(line);
 
             /** 자동 또는 수동 인식 구간의 캡처 간격 제한 */
             RefreshPhase();

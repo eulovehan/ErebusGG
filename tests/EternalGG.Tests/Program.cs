@@ -41,6 +41,29 @@ Assert(state.Generation == baseline + 2, "next match clears previous generation"
 state.Apply("matchingNotification : CancelMatching");
 Assert(state.Phase == MatchPhase.Lobby, "queue cancellation");
 
+/** 시작 로그 누락과 중복 매칭 알림의 로스터 세대 검증 */
+var missingStart = new MatchState();
+missingStart.Apply("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+Assert(missingStart.Phase == MatchPhase.Matched && missingStart.Generation == 1, "completion without queue starts a fresh roster");
+missingStart.Apply("matchingNotification : MatchingPadding, Matched");
+missingStart.Apply("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+Assert(missingStart.Generation == 1, "duplicate completion formats preserve current roster");
+missingStart.Apply("[PROFILE TIME][LOADING][GAME]");
+missingStart.Apply("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+Assert(missingStart.Phase == MatchPhase.Loading && missingStart.Generation == 1, "late completion does not regress loading");
+missingStart.Apply("[PROFILE TIME][LOBBY]");
+missingStart.Apply("matchingNotification : MatchingPadding, Matched");
+Assert(missingStart.Phase == MatchPhase.Matched && missingStart.Generation == 2, "matched notification alone starts next roster");
+var paddingStart = new MatchState();
+paddingStart.Apply("matchingNotification : MatchingPadding");
+paddingStart.Apply("matchingNotification : MatchingPadding");
+Assert(paddingStart.Phase == MatchPhase.Queuing && paddingStart.Generation == 1, "padding recovers missing queue without repeated generations");
+paddingStart.Apply("matchingNotification : StartMatching, WaitForStartMatching");
+paddingStart.Apply("matchingNotification : StartMatching");
+Assert(paddingStart.Generation == 1, "repeated queue notifications preserve generation");
+paddingStart.Apply("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+Assert(paddingStart.Generation == 1 && paddingStart.Phase == MatchPhase.Matched, "recovered queue completion keeps one generation");
+
 /** 한국어와 영문 닉네임 및 잘못된 인식 결과 검증 */
 Assert(NicknameRules.Normalize(" 이 하 링 \n") == "이하링", "Korean OCR whitespace normalization");
 Assert(NicknameRules.Normalize("Player123") == "Player123", "mixed Latin nickname");

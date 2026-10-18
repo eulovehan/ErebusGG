@@ -148,6 +148,25 @@ internal static class Program
         ownVm.Match.Reset();
         foreach (var player in ownVm.Players) player.Reset();
         Assert(ownVm.VisiblePlayers.Count == 0 && ownVm.EmptyTeam, "inactive reset roster returns to one empty state");
+
+        /** 시작 알림 누락과 재확인 시 이전 자동 이름 제거 검증 */
+        using var recoveryVm = new MainViewModel { SelfNickname = "" };
+        foreach (var player in recoveryVm.Players) player.SetDetectedName("이전팀원");
+        recoveryVm.ApplyGameLog("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+        Assert(recoveryVm.Players.All(p => !p.HasName) && recoveryVm.VisiblePlayers.Count == 3, "completion without queue clears stale names and retains input slots");
+        recoveryVm.Players[0].SetDetectedName("현재이름");
+        recoveryVm.ApplyGameLog("matchingNotification : MatchingPadding, Matched");
+        Assert(recoveryVm.Players[0].Nickname == "현재이름", "duplicate matched notification does not erase current names");
+        recoveryVm.Players[1].Nickname = "직접입력유지";
+        recoveryVm.ResetAutomaticNames();
+        Assert(!recoveryVm.Players[0].HasName && !recoveryVm.Players[0].ScreenVerified && recoveryVm.Players[1].Nickname == "직접입력유지", "name refresh clears automatic identity and preserves manual correction");
+        for (var frame = 0; frame < NicknameConsensus.RequiredFrames; frame++) recoveryVm.ApplyNameFrame([new(0, "새이름", 0.98f)]);
+        Assert(recoveryVm.Players[0].Nickname == "새이름" && recoveryVm.Players[0].ScreenVerified, "refreshed identity requires fresh consecutive evidence");
+        recoveryVm.RestoreGameHistory(["[PROFILE TIME][LOBBY]", "[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null"]);
+        Assert(recoveryVm.Match.Phase == MatchPhase.Matched && !recoveryVm.Players[0].HasName && recoveryVm.VisiblePlayers.Count == 3, "mid-selection connection discards automatic names before fresh screen reading");
+        recoveryVm.ApplyGameLog("[PROFILE TIME][LOADING][GAME]");
+        recoveryVm.ApplyGameLog("[PROFILE TIME][LOBBY]");
+        Assert(recoveryVm.Players.All(p => !p.HasName) && recoveryVm.EmptyTeam, "return to lobby clears the previous roster including manual edits");
         PresentationTraceSources.DataBindingSource.Flush();
         Assert(errors.ToString().Length == 0, "no runtime binding errors");
         window.Close();
@@ -163,6 +182,9 @@ internal static class Program
         using var image = new System.Drawing.Bitmap(args[1]);
         using var ocr = new OcrService();
         using var vm = new MainViewModel { SelfNickname = "" };
+        foreach (var player in vm.Players) player.SetDetectedName("이전팀원");
+        vm.ApplyGameLog("[OnReceiveMatchingUpdate] MatchingComplete, matchPadding.userCount : null");
+        Assert(vm.Players.All(p => !p.HasName), "new match removes stale roster before image recognition");
         for (var frame = 0; frame < NicknameConsensus.RequiredFrames; frame++)
         {
             var candidates = ocr.Read(image, new AppSettings().SelectionRegions);

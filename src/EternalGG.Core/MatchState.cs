@@ -36,12 +36,22 @@ public sealed partial class MatchState
         /** 매칭 알림과 화면 전환별 단계 갱신 */
         if (line.Contains("matchingNotification : StartMatching", StringComparison.Ordinal))
         {
+            if (Phase != MatchPhase.Queuing) Generation++;
             Phase = MatchPhase.Queuing;
-            Generation++;
         }
-        else if (line.Contains("] MatchingComplete,", StringComparison.Ordinal))
+        else if (line.Contains("] MatchingComplete,", StringComparison.Ordinal) || line.Contains("matchingNotification : MatchingPadding, Matched", StringComparison.Ordinal))
         {
-            Phase = MatchPhase.Matched;
+            /** 시작 로그 누락 복구와 중복 완료 알림의 세대 보존 */
+            if (Phase is not (MatchPhase.Matched or MatchPhase.Loading or MatchPhase.InGame))
+            {
+                if (Phase != MatchPhase.Queuing) Generation++;
+                Phase = MatchPhase.Matched;
+            }
+        }
+        else if (line.Contains("matchingNotification : MatchingPadding", StringComparison.Ordinal) && Phase is MatchPhase.Lobby or MatchPhase.Finished)
+        {
+            Generation++;
+            Phase = MatchPhase.Queuing;
         }
         else if (line.Contains("[PROFILE TIME][LOADING][GAME]", StringComparison.Ordinal))
         {

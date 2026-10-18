@@ -248,7 +248,7 @@
                   <TextBlock Text="개인정보와 단축키" Style="{StaticResource PageHeading}" />
                   <TextBlock Text="게임 화면에서 이름을 이 PC 안에서 읽습니다. 캡처한 화면 원본은 파일에 저장하거나 업로드하지 않습니다. 전적 조회 시 닉네임을 이터널리턴 공식 서비스로 전송합니다." TextWrapping="Wrap" LineHeight="24" />
                   <TextBlock Text="Ctrl+R / 이름 다시 확인&#10;Ctrl+Enter / 현재 팀 전적 조회&#10;Ctrl+, / 설정&#10;Esc / 현재 매칭으로 돌아가기" Style="{StaticResource Caption}" FontSize="13" LineHeight="26" Margin="0,20,0,0" />
-                  <TextBlock Text="EternalGG / v0.1.0" Style="{StaticResource Caption}" Margin="0,24,0,0" />
+                  <TextBlock Text="{Binding VersionLabel}" Style="{StaticResource Caption}" Margin="0,24,0,0" />
                 </StackPanel>
               </Border>
             </StackPanel>
