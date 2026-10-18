@@ -14,15 +14,25 @@ internal sealed class PaddleNicknameRecognizer : IDisposable
     private readonly Dictionary<string, (InferenceSession Session, string[] Characters)> models = [];
 
     /** 두 명암 영상과 문자권이 일치한 보완 후보 */
-    public (string? Name, float Confidence, string Detail) Read(Bitmap image, Rectangle ink, string? corroboration)
+    public (string? Name, float Confidence, string Detail, bool RequiresReview) Read(Bitmap image, Rectangle ink, string? corroboration)
     {
         var candidates = new List<(string Name, float Confidence)>();
+        var suggestions = new List<(string Name, float Confidence)>();
         var details = new List<string>();
         foreach (var language in new[] { "korean", "ch" })
         {
             var normal = Recognize(image, ink, language, false);
             var inverted = Recognize(image, ink, language, true);
             details.Add($"{language} {normal.Name ?? "없음"} / {normal.Confidence:0.0000}, 반전 {inverted.Name ?? "없음"} / {inverted.Confidence:0.0000}");
+
+            /** 확정 조건과 분리한 저신뢰 이름 후보 보존 */
+            foreach (var reading in new[] { normal, inverted })
+            {
+                if (reading.Name == null || !float.IsFinite(reading.Confidence)) continue;
+                var hangul = reading.Name.Any(c => c is >= '\uac00' and <= '\ud7a3');
+                if (language == "ch" && hangul || language == "korean" && !hangul && reading.Name.Any(c => c > 127)) continue;
+                suggestions.Add((reading.Name, reading.Confidence));
+            }
 
             if (normal.Name == null || normal.Name != inverted.Name) continue;
             var hasHangul = normal.Name.Any(c => c is >= '\uac00' and <= '\ud7a3');
@@ -47,11 +57,11 @@ internal sealed class PaddleNicknameRecognizer : IDisposable
             .Where(c => c.Name.Any(ch => ch > 127) || c.Name == corroboration || !candidates.Any(other => other.Name.Any(ch => ch > 127)));
         var ranked = complete.GroupBy(c => c.Name).Select(g => (Name: g.Key, Confidence: g.Max(c => c.Confidence))).OrderByDescending(c => c.Confidence).ToArray();
         if (ranked.Length == 1 || ranked.Length > 1 && ranked[0].Confidence - ranked[1].Confidence >= 0.02f)
-            return (ranked[0].Name, ranked[0].Confidence, string.Join(" / ", details));
+            return (ranked[0].Name, ranked[0].Confidence, string.Join(" / ", details), false);
         var supported = ranked.Where(c => c.Name == corroboration).ToArray();
-        return supported.Length == 1
-            ? (supported[0].Name, supported[0].Confidence, string.Join(" / ", details))
-            : (null, 0, string.Join(" / ", details));
+        if (supported.Length == 1) return (supported[0].Name, supported[0].Confidence, string.Join(" / ", details), false);
+        var suggestion = suggestions.OrderByDescending(c => c.Confidence).FirstOrDefault();
+        return (suggestion.Name, suggestion.Confidence, string.Join(" / ", details), true);
     }
 
     /** 비율 보존 BGR 정규화와 CTC 중복 문자 복원 */

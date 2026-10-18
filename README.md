@@ -4,7 +4,7 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 ## 실행
 
-`artifacts/win-x64/EternalGG.exe`를 실행한다. 2026-10-18 기본 배포 경로를 v0.1.3으로 갱신했다. 도움말 하단에 실제 빌드 버전이 표시된다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/models/tessdata/licenses 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
+`artifacts/win-x64/EternalGG.exe`를 실행한다. 2026-10-18 기본 배포 경로를 v0.1.4로 갱신했다. 도움말 하단에 실제 빌드 버전이 표시된다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/models/tessdata/licenses 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
 .NET 런타임은 포함되어 있지만 Tesseract와 ONNX Runtime 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 의존성](https://github.com/charlesw/tesseract#dependencies), [ONNX Runtime 전제 조건](https://onnxruntime.ai/docs/install/#requirements).
 
@@ -20,7 +20,7 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 한국어, 일본어, 영어, 중국어 간체/번체, 숫자는 동봉한 로컬 모델로 확인한다. 새 첨부 화면의 가운데 이름 MikonS2와 합성 다국어/짧은 한글 이름 24개를 검증했다. 실제 모든 게임 화면의 정확도를 보장하지 않으며, [다국어 인식 개선 기록](docs/ocr-multilingual-2026-10-18.md)에 표본과 제한을 구분했다. Python, 유료 OCR API, 실행 중 모델 다운로드는 필요 없다.
 
-짧은 이름의 경계 점수에는 명암 재검증을 추가한다. [짧은 이름 누락 수정 기록](docs/ocr-short-name-2026-10-18.md)을 참고한다.\n\n매칭 시작 로그가 누락돼도 완료 알림으로 이전 팀을 초기화한다. 이름 다시 확인은 직접 수정한 이름을 보존하고 자동 이름을 새로 읽는다. [이전 이름 잔존과 배포 경로 검증](docs/ocr-roster-state-2026-10-18.md)을 참고한다.
+짧은 이름의 경계 점수에는 명암 재검증을 추가한다. [짧은 이름 누락 수정 기록](docs/ocr-short-name-2026-10-18.md)을 참고한다.\n\n읽힌 이름은 점수가 낮아도 입력란에 표시하며 인식 신뢰도 낮음 / 보통 / 높음 라벨로 구분한다. 잠정 이름은 사용자가 확인하거나 수정할 수 있다. [신뢰도 등급과 검증 기록](docs/ocr-confidence-ux-2026-10-18.md)을 참고한다.\n\n매칭 시작 로그가 누락돼도 완료 알림으로 이전 팀을 초기화한다. 이름 다시 확인은 직접 수정한 이름을 보존하고 자동 이름을 새로 읽는다. [이전 이름 잔존과 배포 경로 검증](docs/ocr-roster-state-2026-10-18.md)을 참고한다.
 
 - `Ctrl+R`: 40초 동안 이름 다시 읽기
 - `Ctrl+Enter`: 전적 조회

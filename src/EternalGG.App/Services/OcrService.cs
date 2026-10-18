@@ -11,7 +11,7 @@ namespace EternalGG.App.Services;
 public sealed record NameRegion(double X, double Y, double Width, double Height);
 
 /** 슬롯별 이름 인식 후보 */
-public sealed record OcrCandidate(int Slot, string Name, float Confidence);
+public sealed record OcrCandidate(int Slot, string Name, float Confidence, bool RequiresReview = false);
 
 /** 한국어와 일본어 및 영중문 로컬 이름 인식 */
 public sealed class OcrService : IDisposable
@@ -74,8 +74,16 @@ public sealed class OcrService : IDisposable
                 diagnostics.Add($"영역 {i + 1} 한국어 재검증: {extraGray.Name ?? "없음"} / {extraGray.Confidence:0.00}, {extraColor.Name ?? "없음"} / {extraColor.Confidence:0.00}");
                 if (extraGray.Name == corroboration && extraColor.Name == corroboration && Math.Min(extraGray.Confidence, extraColor.Confidence) >= 0.90f)
                     candidates.Add(new(i, corroboration, Math.Min(extraGray.Confidence, extraColor.Confidence)));
+                else if (verified.Name != null) candidates.Add(new(i, verified.Name, verified.Confidence, true));
             }
-            else if (verified.Name != null) candidates.Add(new(i, verified.Name, verified.Confidence));
+            else if (verified.Name != null) candidates.Add(new(i, verified.Name, verified.Confidence, verified.RequiresReview));
+
+            /** 다국어 모델의 결과가 없을 때도 읽힌 후보의 확인 필요 표시 */
+            if (!candidates.Any(c => c.Slot == i))
+            {
+                var fallback = new[] { gray, color }.Where(c => c.Name != null).OrderByDescending(c => c.Confidence).ToArray();
+                if (fallback.Length > 0) candidates.Add(new(i, fallback[0].Name!, fallback[0].Confidence, true));
+            }
         }
 
         Diagnostics = string.Join(" / ", diagnostics);

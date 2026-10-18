@@ -15,7 +15,11 @@
           <TextBlock Text="{Binding Label}" Style="{StaticResource Caption}" Margin="0,0,0,12" />
           <TextBox x:Name="EditableName" Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsReadOnly}" AutomationProperties.Name="플레이어 닉네임" FontSize="17" Height="Auto" MinHeight="42" TextWrapping="Wrap" ToolTip="잘못된 이름을 직접 수정할 수 있습니다" />
           <TextBlock x:Name="ReadOnlyName" Text="{Binding Nickname}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="Collapsed" />
-          <TextBlock x:Name="NameSource" Text="{Binding Source}" Style="{StaticResource Caption}" Margin="0,8,0,24" />
+          <TextBlock x:Name="NameSource" Text="{Binding Source}" Style="{StaticResource Caption}" Margin="0,8,0,12" />
+          <Border Background="{StaticResource SecondaryBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left" Margin="0,0,0,12" Visibility="{Binding HasRecognitionConfidence, Converter={StaticResource Visible}}" ToolTip="낮음: 0 이상 0.4 미만 / 보통: 0.4 이상 0.7 미만 / 높음: 0.7 이상 1 이하">
+            <TextBlock Text="{Binding ConfidenceLabel}" FontSize="11" Foreground="{StaticResource ForegroundBrush}" />
+          </Border>
+          <Button Content="이 이름이 맞아요" Command="{Binding ConfirmNameCommand}" Visibility="{Binding NeedsNameConfirmation, Converter={StaticResource Visible}}" AutomationProperties.Name="표시된 닉네임 확인" HorizontalAlignment="Left" Margin="0,0,0,12" />
           <StackPanel Visibility="{Binding HasStats, Converter={StaticResource Visible}}">
             <TextBlock Text="MMR" Style="{StaticResource Caption}" />
             <TextBlock Text="{Binding Mmr}" FontSize="32" FontWeight="SemiBold" Margin="0,4,0,20" />

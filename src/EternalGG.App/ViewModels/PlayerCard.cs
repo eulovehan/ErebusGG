@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using EternalGG.Core;
 
 namespace EternalGG.App.ViewModels;
@@ -16,7 +17,9 @@ public partial class PlayerCard : ObservableObject
     [ObservableProperty] private string recent = "";
     [ObservableProperty] private bool hasStats;
     [ObservableProperty] private bool hasSlot;
-    [ObservableProperty] private bool screenVerified;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasConfirmedName))] private bool screenVerified;
+    [ObservableProperty] private bool needsNameConfirmation;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ConfidenceGrade)), NotifyPropertyChangedFor(nameof(ConfidenceLabel)), NotifyPropertyChangedFor(nameof(HasRecognitionConfidence))] private float? recognitionConfidence;
     [ObservableProperty] private string fetchedAt = "";
     public string Label { get; init; } = "ALLY";
     public bool HasName => !string.IsNullOrWhiteSpace(Nickname);
@@ -24,6 +27,11 @@ public partial class PlayerCard : ObservableObject
     public int Revision { get; private set; }
     public bool UserEdited { get; private set; }
     public bool HasConfirmedName => HasName && (ScreenVerified || UserEdited);
+
+    /** 인식 점수의 사용자 등급 표시 */
+    public bool HasRecognitionConfidence => RecognitionConfidence.HasValue;
+    public string ConfidenceGrade => RecognitionConfidence switch { null => "", < 0.4f => "낮음", < 0.7f => "보통", _ => "높음" };
+    public string ConfidenceLabel => "인식 신뢰도 / " + ConfidenceGrade;
     private bool detecting;
 
     /** 닉네임 변경에 따른 기존 전적 초기화 */
@@ -31,16 +39,44 @@ public partial class PlayerCard : ObservableObject
     {
         ClearStats();
         ScreenVerified = false;
+        NeedsNameConfirmation = false;
+        RecognitionConfidence = null;
         Revision++;
         if (!string.IsNullOrWhiteSpace(value)) HasSlot = true;
         if (!detecting) UserEdited = HasSlot;
         Source = detecting ? "자동 확인" : "직접 입력";
         Status = string.IsNullOrWhiteSpace(value) ? "이름 확인 대기" : "전적 조회 대기";
         OnPropertyChanged(nameof(HasName));
+        OnPropertyChanged(nameof(HasConfirmedName));
+    }
+
+    /** 확정되지 않은 인식 이름의 입력란 표시 */
+    public void SetSuggestedName(string value, bool uncertain, float confidence)
+    {
+        if (UserEdited || ScreenVerified) return;
+        detecting = true;
+        try { Nickname = value; }
+        finally { detecting = false; }
+        NeedsNameConfirmation = true;
+        RecognitionConfidence = Math.Clamp(confidence, 0, 1);
+        Source = uncertain ? "자동 입력" : "이름 확인 중";
+        Status = "이름이 맞는지 확인하거나 직접 수정해 주세요";
+    }
+
+    /** 표시된 이름에 대한 사용자 확인 */
+    [RelayCommand]
+    private void ConfirmName()
+    {
+        if (!HasName || !NeedsNameConfirmation) return;
+        UserEdited = true;
+        NeedsNameConfirmation = false;
+        Source = "직접 확인";
+        Status = "전적 조회 대기";
+        OnPropertyChanged(nameof(HasConfirmedName));
     }
 
     /** 직접 수정한 이름을 보존하는 자동 이름 반영 */
-    public bool SetDetectedName(string value)
+    public bool SetDetectedName(string value, float? confidence = null)
     {
         if (UserEdited || Nickname == value && ScreenVerified) return false;
         detecting = true;
@@ -48,6 +84,9 @@ public partial class PlayerCard : ObservableObject
         finally { detecting = false; }
         Source = "자동 확인";
         ScreenVerified = true;
+        NeedsNameConfirmation = false;
+        RecognitionConfidence = confidence;
+        if (!HasStats) Status = "전적 조회 대기";
         return true;
     }
 
@@ -59,7 +98,8 @@ public partial class PlayerCard : ObservableObject
         try { Nickname = value; }
         finally { detecting = false; }
         ScreenVerified = false;
-        Source = "등록한 이름 / 확인 필요";
+        NeedsNameConfirmation = true;
+        Source = "등록한 이름";
         Status = "화면에서 본인 이름을 확인하고 있어요";
     }
 
@@ -71,6 +111,8 @@ public partial class PlayerCard : ObservableObject
         finally { detecting = false; }
         UserEdited = false;
         ScreenVerified = false;
+        NeedsNameConfirmation = false;
+        RecognitionConfidence = null;
         HasSlot = false;
         Revision++;
         ClearStats();

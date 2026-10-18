@@ -67,7 +67,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string QueryCondition => !int.TryParse(SeasonInput, out var season) || season < 1 ? "조회 조건 미설정" : (Ranked ? "랭크 / 스쿼드" : "일반 / 스쿼드") + " / 시즌 " + season;
     public string ServiceMessage => string.IsNullOrWhiteSpace(ApiKey) ? "현재 전적 조회를 사용할 수 없어요. 이름 확인은 계속 사용할 수 있습니다." : "조회 조건: " + QueryCondition;
     public bool ShowSearchService => !SearchHasResult || !string.IsNullOrWhiteSpace(ApiKey);
-    public bool CanTeamLookup => VisiblePlayers.Any(p => p.HasName) && !IsLookupBusy;
+    public bool CanTeamLookup => VisiblePlayers.Any(p => p.HasConfirmedName) && !IsLookupBusy;
     public bool CanSearch => !IsLookupBusy;
     public string LookupLabel => IsLookupBusy ? "불러오는 중…" : "전적 조회";
     public string VersionLabel => $"EternalGG / v{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
@@ -87,7 +87,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AutoDetect = Settings.AutoDetect;
         BringForward = Settings.BringForward;
         foreach (var player in Players)
-            player.PropertyChanged += (_, args) => { if (args.PropertyName is nameof(PlayerCard.HasName) or nameof(PlayerCard.HasSlot)) NotifyTeam(); };
+            player.PropertyChanged += (_, args) => { if (args.PropertyName is nameof(PlayerCard.HasName) or nameof(PlayerCard.HasSlot) or nameof(PlayerCard.HasConfirmedName)) NotifyTeam(); };
         AddEvent("EternalGG 시작");
     }
 
@@ -205,7 +205,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /** 현재 팀의 전적 조회 */
     [RelayCommand]
-    private async Task LookupAsync() => await QueryAsync(VisiblePlayers.Where(p => p.HasName).ToArray(), true);
+    private async Task LookupAsync() => await QueryAsync(VisiblePlayers.Where(p => p.HasConfirmedName).ToArray(), true);
 
     /** 현재 팀과 분리된 닉네임 검색 */
     [RelayCommand]
@@ -284,7 +284,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool ApplyNameFrame(IReadOnlyList<OcrCandidate> candidates)
     {
         var expected = Match.IsAi ? 1 : 3;
-        var confirmed = names.ObserveFrame(candidates.Select(c => (c.Slot, c.Name, c.Confidence)), expected);
+
+        /** 낮은 신뢰도도 이름 입력란에 표시하고 자동 확정과 분리 */
+        foreach (var group in candidates.Where(c => c.Slot >= 0 && c.Slot < expected && float.IsFinite(c.Confidence) && NicknameRules.Normalize(c.Name) == c.Name).GroupBy(c => c.Slot))
+        {
+            var suggestion = group.OrderBy(c => c.RequiresReview).ThenByDescending(c => c.Confidence).First();
+            if (suggestion.Slot == 0 && !string.IsNullOrWhiteSpace(SelfNickname) && suggestion.Name != SelfNickname) continue;
+            Players[suggestion.Slot].SetSuggestedName(suggestion.Name, suggestion.RequiresReview || suggestion.Confidence < NicknameConsensus.MinimumConfidence, suggestion.Confidence);
+        }
+
+        var confirmed = names.ObserveFrame(candidates.Where(c => !c.RequiresReview).Select(c => (c.Slot, c.Name, c.Confidence)), expected);
         var added = false;
         foreach (var candidate in confirmed)
         {
@@ -294,7 +303,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 continue;
             }
 
-            if (!Players[candidate.Slot].SetDetectedName(candidate.Name)) continue;
+            var confidence = candidates.Where(c => c.Slot == candidate.Slot && c.Name == candidate.Name && !c.RequiresReview).Max(c => c.Confidence);
+            if (!Players[candidate.Slot].SetDetectedName(candidate.Name, confidence)) continue;
             AddEvent($"플레이어 {candidate.Slot + 1} 이름 확인 완료");
             added = true;
         }

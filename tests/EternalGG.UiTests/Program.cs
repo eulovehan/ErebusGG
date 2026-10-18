@@ -167,6 +167,49 @@ internal static class Program
         recoveryVm.ApplyGameLog("[PROFILE TIME][LOADING][GAME]");
         recoveryVm.ApplyGameLog("[PROFILE TIME][LOBBY]");
         Assert(recoveryVm.Players.All(p => !p.HasName) && recoveryVm.EmptyTeam, "return to lobby clears the previous roster including manual edits");
+
+        /** 낮은 점수의 즉시 표시와 사용자 확인 전 자동 확정 방지 검증 */
+        using var pendingVm = new MainViewModel { SelfNickname = "" };
+        IReadOnlyList<OcrCandidate> pendingNames = [new(0, "첫후보", 0.2f, true), new(1, "가운데후보", 0.55f, true), new(2, "끝후보", 0.9f, true)];
+        pendingVm.ApplyNameFrame(pendingNames);
+        Assert(pendingVm.Players.Select(p => p.Nickname).SequenceEqual(pendingNames.Select(c => c.Name)), "uncertain names appear after one observation");
+        Assert(pendingVm.Players.Select(p => p.ConfidenceGrade).SequenceEqual(new[] { "낮음", "보통", "높음" }), "three confidence labels are separate from confirmation");
+        for (var frame = 0; frame < 4; frame++) pendingVm.ApplyNameFrame(pendingNames);
+        Assert(pendingVm.Players.All(p => !p.ScreenVerified && !p.HasConfirmedName && p.NeedsNameConfirmation) && !pendingVm.CanTeamLookup, "uncertain repeated names never enable automatic lookup");
+        window.DataContext = pendingVm;
+        foreach (var size in new[] { (W: 832, H: 832), (W: 980, H: 760), (W: 1160, H: 910) })
+        {
+            Layout(root, size.W, size.H);
+            Audit(root, size.W);
+            if (output != null) Render(root, Path.Combine(output, "confidence-labels-" + size.W + ".png"), size.W, size.H);
+        }
+
+        window.DataContext = vm;
+        pendingVm.Players[0].ConfirmNameCommand.Execute(null);
+        Assert(pendingVm.Players[0].HasConfirmedName && pendingVm.Players[0].UserEdited && !pendingVm.Players[0].NeedsNameConfirmation && pendingVm.CanTeamLookup, "explicit name confirmation enables lookup without claiming screen certainty");
+        Assert(!pendingVm.Players[0].ScreenVerified && pendingVm.Players[0].ConfidenceGrade == "낮음", "user confirmation preserves original recognition grade");
+        pendingVm.LookupCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        Assert(pendingVm.Players[0].Status == "전적 미조회" && pendingVm.Players[2].Status.Contains("이름이 맞는지"), "team lookup excludes unconfirmed names even after another name is confirmed");
+        pendingVm.Players[1].Nickname = "직접수정";
+        pendingVm.ApplyNameFrame(pendingNames);
+        Assert(pendingVm.Players[1].Nickname == "직접수정" && !pendingVm.Players[1].HasRecognitionConfidence && pendingVm.Players[1].HasConfirmedName, "manual correction removes the old name confidence label");
+
+        /** 신뢰도 구간 경계와 높은 확정 이름 보호 검증 */
+        var gradeCard = new PlayerCard();
+        foreach (var sample in new (float Score, string Grade)[] { (0f, "낮음"), (0.3999f, "낮음"), (0.4f, "보통"), (0.6999f, "보통"), (0.7f, "높음"), (1f, "높음") })
+        {
+            gradeCard.SetSuggestedName("표시이름", true, sample.Score);
+            Assert(gradeCard.ConfidenceGrade == sample.Grade, "confidence boundary " + sample.Score);
+        }
+
+        gradeCard.SetDetectedName("확정이름", 0.95f);
+        gradeCard.SetSuggestedName("약한후보", true, 0.1f);
+        Assert(gradeCard.Nickname == "확정이름" && gradeCard.ConfidenceGrade == "높음", "uncertain candidates cannot replace confirmed identity");
+        gradeCard.Reset();
+        Assert(!gradeCard.HasRecognitionConfidence && !gradeCard.NeedsNameConfirmation, "new match clears confidence and confirmation controls");
+        gradeCard.SetSuggestedName("자동승격", false, 0.96f);
+        gradeCard.SetDetectedName("자동승격", 0.97f);
+        Assert(gradeCard.Status == "전적 조회 대기" && !gradeCard.NeedsNameConfirmation, "automatic confirmation removes provisional guidance for unchanged text");
         PresentationTraceSources.DataBindingSource.Flush();
         Assert(errors.ToString().Length == 0, "no runtime binding errors");
         window.Close();
