@@ -22,12 +22,23 @@ internal sealed class PaddleNicknameRecognizer : IDisposable
         {
             var normal = Recognize(image, ink, language, false);
             var inverted = Recognize(image, ink, language, true);
-            details.Add($"{language} {normal.Name ?? "없음"} / {normal.Confidence:0.00}, 반전 {inverted.Name ?? "없음"} / {inverted.Confidence:0.00}");
+            details.Add($"{language} {normal.Name ?? "없음"} / {normal.Confidence:0.0000}, 반전 {inverted.Name ?? "없음"} / {inverted.Confidence:0.0000}");
 
             if (normal.Name == null || normal.Name != inverted.Name) continue;
             var hasHangul = normal.Name.Any(c => c is >= '\uac00' and <= '\ud7a3');
             if (language == "ch" && hasHangul || language == "korean" && !hasHangul && normal.Name.Any(c => c > 127)) continue;
             var confidence = Math.Min(normal.Confidence, inverted.Confidence);
+
+            /** 색상 배경의 경계 점수 후보에 대한 명암 재검증 */
+            if (confidence is >= 0.85f and < 0.90f)
+            {
+                var neutral = Recognize(image, ink, language, false, true);
+                var neutralInverted = Recognize(image, ink, language, true, true);
+                details.Add($"명암 {neutral.Name ?? "없음"} / {neutral.Confidence:0.0000}, 명암 반전 {neutralInverted.Name ?? "없음"} / {neutralInverted.Confidence:0.0000}");
+                if (neutral.Name != normal.Name || neutralInverted.Name != normal.Name) continue;
+                confidence = Math.Min(neutral.Confidence, neutralInverted.Confidence);
+            }
+
             if (confidence >= 0.90f) candidates.Add((normal.Name, confidence));
         }
 
@@ -44,7 +55,7 @@ internal sealed class PaddleNicknameRecognizer : IDisposable
     }
 
     /** 비율 보존 BGR 정규화와 CTC 중복 문자 복원 */
-    private (string? Name, float Confidence) Recognize(Bitmap image, Rectangle ink, string language, bool invert)
+    private (string? Name, float Confidence) Recognize(Bitmap image, Rectangle ink, string language, bool invert, bool neutral = false)
     {
         var model = GetModel(language);
         const int height = 48;
@@ -57,6 +68,20 @@ internal sealed class PaddleNicknameRecognizer : IDisposable
         {
             graphics.Clear(Color.FromArgb(25, 27, 30));
             graphics.DrawImage(image, new Rectangle(padding, padding, ink.Width, ink.Height), ink, GraphicsUnit.Pixel);
+        }
+
+        /** 작은 밝은 글자의 획을 유지하는 색상 제거 */
+        if (neutral)
+        {
+            for (var y = padding; y < padding + ink.Height; y++)
+            {
+                for (var x = padding; x < padding + ink.Width; x++)
+                {
+                    var c = crop.GetPixel(x, y);
+                    var value = Math.Min(c.R, Math.Min(c.G, c.B));
+                    crop.SetPixel(x, y, Color.FromArgb(value, value, value));
+                }
+            }
         }
 
         using var resized = new Bitmap(scaledWidth, height);

@@ -4,7 +4,7 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 ## 실행
 
-`artifacts/win-x64/EternalGG.exe`를 실행한다. 2026-10-18 기본 배포 경로를 v0.1.2로 갱신했다. 도움말 하단에 실제 빌드 버전이 표시된다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/models/tessdata/licenses 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
+`artifacts/win-x64/EternalGG.exe`를 실행한다. 2026-10-18 기본 배포 경로를 v0.1.3으로 갱신했다. 도움말 하단에 실제 빌드 버전이 표시된다. 런타임을 포함한 폴더 배포본이므로 DLL/x64/models/tessdata/licenses 폴더를 함께 유지한다. Windows 10/11 x64를 대상으로 개발하며, 현재 실제 실행 검증은 Windows 11에서만 수행했다.
 
 .NET 런타임은 포함되어 있지만 Tesseract와 ONNX Runtime 네이티브 DLL에는 Visual C++ 2019 호환 x64 런타임이 필요하다. 개발 도구 없는 PC의 해당 전제 조건은 별도로 검증해야 한다. [OCR 바인딩 의존성](https://github.com/charlesw/tesseract#dependencies), [ONNX Runtime 전제 조건](https://onnxruntime.ai/docs/install/#requirements).
 
@@ -18,9 +18,9 @@ C# / .NET 10 / WPF 기반 이터널리턴 전적 도우미 MVP.
 
 일부 이름이 누락되면 해당 팀원 카드에서 닉네임을 직접 입력할 수 있다. 등록한 본인 이름은 화면에서 확인되기 전까지 등록 이름으로 구분하며 다른 자동 후보가 덮어쓰지 않는다. [2026-10-18 이름 인식 개선 기록](docs/ocr-fix-2026-10-18.md)을 참고한다.
 
-한국어, 일본어, 영어, 중국어 간체/번체, 숫자는 동봉한 로컬 모델로 확인한다. 새 첨부 화면의 가운데 이름 MikonS2와 합성 다국어 이름 21개를 검증했다. 실제 모든 게임 화면의 정확도를 보장하지 않으며, [다국어 인식 개선 기록](docs/ocr-multilingual-2026-10-18.md)에 표본과 제한을 구분했다. Python, 유료 OCR API, 실행 중 모델 다운로드는 필요 없다.
+한국어, 일본어, 영어, 중국어 간체/번체, 숫자는 동봉한 로컬 모델로 확인한다. 새 첨부 화면의 가운데 이름 MikonS2와 합성 다국어/짧은 한글 이름 24개를 검증했다. 실제 모든 게임 화면의 정확도를 보장하지 않으며, [다국어 인식 개선 기록](docs/ocr-multilingual-2026-10-18.md)에 표본과 제한을 구분했다. Python, 유료 OCR API, 실행 중 모델 다운로드는 필요 없다.
 
-매칭 시작 로그가 누락돼도 완료 알림으로 이전 팀을 초기화한다. 이름 다시 확인은 직접 수정한 이름을 보존하고 자동 이름을 새로 읽는다. [이전 이름 잔존과 배포 경로 검증](docs/ocr-roster-state-2026-10-18.md)을 참고한다.
+짧은 이름의 경계 점수에는 명암 재검증을 추가한다. [짧은 이름 누락 수정 기록](docs/ocr-short-name-2026-10-18.md)을 참고한다.\n\n매칭 시작 로그가 누락돼도 완료 알림으로 이전 팀을 초기화한다. 이름 다시 확인은 직접 수정한 이름을 보존하고 자동 이름을 새로 읽는다. [이전 이름 잔존과 배포 경로 검증](docs/ocr-roster-state-2026-10-18.md)을 참고한다.
 
 - `Ctrl+R`: 40초 동안 이름 다시 읽기
 - `Ctrl+Enter`: 전적 조회
@@ -60,7 +60,7 @@ VS Code는 모든 창을 닫은 뒤 프로젝트의 `open-vscode.cmd`를 실행�
 
 설정 파일: `%LOCALAPPDATA%/EternalGG/settings.json`. `SelectionRegions`와 `GameRegions`의 좌표는 게임 클라이언트 영역 대비 0~1 비율이다. 파일을 변경한 뒤 앱을 재실행한다.
 
-최신 기본 실행 경로는 artifacts/win-x64/EternalGG.exe다. 같은 v0.1.2 검증본을 artifacts/win-x64-rosterfix-20261018에도 보관한다. multilang, ocrfix, win-x64-neutral, win-x64-chrome은 이전 검증 빌드다. build.ps1의 일반 Publish 출력도 artifacts/win-x64다. 배포 시 실행 중인 EternalGG를 먼저 종료한다. 과거 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
+최신 기본 실행 경로는 artifacts/win-x64/EternalGG.exe다. v0.1.2는 artifacts/win-x64-rosterfix-20261018에 보관한 이전 검증본이다. multilang, ocrfix, win-x64-neutral, win-x64-chrome은 이전 검증 빌드다. build.ps1의 일반 Publish 출력도 artifacts/win-x64다. 배포 시 실행 중인 EternalGG를 먼저 종료한다. 과거 화면 변경과 실제 조작 검증은 [UX/UI 검수 기록](docs/ux-ui-review.md)을 참고한다.
 
 설계/출처는 `docs/architecture.md`, 검증 기록은 `docs/validation.md`, 라이선스는 `THIRD-PARTY-NOTICES.md`를 참고한다.
 

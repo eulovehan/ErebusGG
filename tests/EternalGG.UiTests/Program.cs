@@ -226,6 +226,7 @@ internal static class Program
         var samples = new[]
         {
             (Font: "Malgun Gothic", Names: new[] { "이하링", "달빛123", "하늘소리7" }),
+            (Font: "Malgun Gothic", Names: new[] { "훗차", "봄비", "달빛" }),
             (Font: "Yu Gothic", Names: new[] { "さくら123", "カタカナ42", "あおぞら7" }),
             (Font: "Microsoft YaHei", Names: new[] { "星空123", "测试玩家8", "永恒回归9" }),
             (Font: "Microsoft JhengHei", Names: new[] { "星光123", "測試玩家8", "永恆回歸9" }),
