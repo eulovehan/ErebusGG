@@ -4,13 +4,14 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AssemblyName>EternalGG</AssemblyName>
-    <Version>0.2.0</Version>
-    <ApplicationIcon>Assets/eternalgg.ico</ApplicationIcon>
+    <AssemblyName>ErebusGG</AssemblyName>
+    <Product>Erebus GG</Product>
+    <Title>Erebus GG</Title>
+    <ApplicationIcon>Assets/erebusgg.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Resource Include="Assets/eternalgg.ico" />
+    <Resource Include="Assets/erebusgg.ico;Assets/Characters/*.png;Assets/Tiers/*.png" />
     <ProjectReference Include="..\EternalGG.Core\EternalGG.Core.csproj" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Tesseract" />

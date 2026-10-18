@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace EternalGG.Core;
 
 /** 공식 전적 응답 모델 */
-public sealed record PlayerStats(string Nickname, string Uid, int Games, int Wins, int Mmr, double AverageRank, string Recent, DateTimeOffset FetchedAt, RecentRanked? RecentRanked = null, string SeasonScope = "선택한 시즌");
+public sealed record PlayerStats(string Nickname, string Uid, int Games, int Wins, int Mmr, double AverageRank, string Recent, DateTimeOffset FetchedAt, RecentRanked? RecentRanked = null, string SeasonScope = "선택한 시즌", RankTier? CurrentTier = null, RankTier? PreviousTier = null);
 
 /** 전적 조회 결과와 상태 메시지 */
 public sealed record LookupResult(PlayerStats? Stats, string Message);
@@ -31,15 +31,19 @@ public sealed class EternalReturnApi(HttpClient http)
 
             /** 선택 조건에 맞는 최근 경기 요약 */
             var recent = "최근 경기 없음";
+            RecentRanked? ranked = null;
             using var games = await GetAsync($"v1/user/games/uid/{Uri.EscapeDataString(uid)}", apiKey, ct);
             if (games.RootElement.TryGetProperty("userGames", out var gameList))
             {
+                /** 응답 범위를 확정할 수 있는 최근 랭크 집계 */
+                var hasMore = games.RootElement.TryGetProperty("next", out var cursor) && cursor.GetRawText() is not ("null" or "0" or "\"\"");
+                if (!hasMore) ranked = RankedMatchParser.Parse(gameList);
                 var ranks = gameList.EnumerateArray().Where(x => ReadInt(x, "seasonId") == season && ReadInt(x, "matchingMode") == mode).Take(5).Select(x => $"{ReadInt(x, "gameRank")}위");
                 recent = string.Join("  /  ", ranks);
                 if (recent.Length == 0) recent = "선택 조건의 최근 경기 없음";
             }
 
-            return new(new(nickname, uid, ReadInt(value, "totalGames"), ReadInt(value, "totalWins"), ReadInt(value, "mmr"), ReadDouble(value, "averageRank"), recent, DateTimeOffset.Now, SeasonScope: "선택 시즌 / " + (mode == 3 ? "랭크 스쿼드" : "일반 스쿼드")), "전적 조회 완료");
+            return new(new(nickname, uid, ReadInt(value, "totalGames"), ReadInt(value, "totalWins"), ReadInt(value, "mmr"), ReadDouble(value, "averageRank"), recent, DateTimeOffset.Now, RecentRanked: ranked, SeasonScope: "선택 시즌 / " + (mode == 3 ? "랭크 스쿼드" : "일반 스쿼드")), "전적 조회 완료");
         }
         catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound) { return new(null, "사용자 또는 전적을 찾지 못했습니다"); }
         catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.Forbidden) { return new(null, "현재 전적 조회를 사용할 수 없어요"); }

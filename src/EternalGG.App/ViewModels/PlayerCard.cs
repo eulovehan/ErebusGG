@@ -19,6 +19,10 @@ public partial class PlayerCard : ObservableObject
     [ObservableProperty] private string seasonScope = "";
     [ObservableProperty] private bool hasStats;
 
+    /** 현재와 직전 정규 시즌의 독립 티어 표시 */
+    [ObservableProperty] private RankTier? currentTier;
+    [ObservableProperty] private RankTier? previousTier;
+
     /** 최근 랭크 표본의 화면 상태 */
     [ObservableProperty] private double rankedPercent;
     [ObservableProperty] private string rankedWinRate = "—";
@@ -138,6 +142,7 @@ public partial class PlayerCard : ObservableObject
         Mmr = Games = WinRate = AverageRank = "—";
         Recent = FetchedAt = SeasonScope = "";
         HasStats = false;
+        CurrentTier = PreviousTier = null;
         RankedPercent = 0;
         RankedWinRate = "—";
         RankedSummary = "전적 조회 대기";
@@ -164,6 +169,8 @@ public partial class PlayerCard : ObservableObject
         AverageRank = stats.AverageRank.ToString("0.0") + "위";
         Recent = stats.Recent;
         SeasonScope = stats.SeasonScope;
+        CurrentTier = stats.CurrentTier;
+        PreviousTier = stats.PreviousTier;
 
         /** 시즌 통계와 최근 랭크 표본의 분리 */
         RankedPercent = stats.RecentRanked is { Games: > 0 } ranked ? 100.0 * ranked.Wins / ranked.Games : 0;

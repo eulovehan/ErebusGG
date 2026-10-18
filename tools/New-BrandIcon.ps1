@@ -1,4 +1,4 @@
-param([string]$Output = (Join-Path $PSScriptRoot '../src/EternalGG.App/Assets/eternalgg.ico'))
+param([string]$Output = (Join-Path $PSScriptRoot '../src/EternalGG.App/Assets/erebusgg.ico'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $brandSizes = @(16,24,32,48,64,128,256)

@@ -1,5 +1,5 @@
 {
-  "dotnet.defaultSolution": "EternalGG.sln",
+  "dotnet.defaultSolution": "ErebusGG.sln",
   "terminal.integrated.env.windows": {
     "DOTNET_ROOT": "${workspaceFolder}\\.tools\\dotnet",
     "PATH": "${workspaceFolder}\\.tools\\dotnet;${env:PATH}",
@@ -17,5 +17,22 @@
     "**/artifacts": true,
     "**/bin": true,
     "**/obj": true
+  },
+  "git.enabled": true,
+  "git.autorefresh": true,
+  "git.decorations.enabled": true,
+  "explorer.decorations.colors": true,
+  "explorer.decorations.badges": true,
+  "scm.diffDecorations": "all",
+  "scm.diffDecorationsGutterVisibility": "always",
+  "workbench.editor.decorations.colors": true,
+  "workbench.editor.decorations.badges": true,
+  "workbench.colorCustomizations": {
+    "editorGutter.modifiedBackground": "#E9AB55",
+    "gitDecoration.modifiedResourceForeground": "#E9AB55",
+    "editorGutter.addedBackground": "#6ACB8B",
+    "editorGutter.deletedBackground": "#E77D7D",
+    "gitDecoration.addedResourceForeground": "#6ACB8B",
+    "gitDecoration.untrackedResourceForeground": "#6ACB8B"
   }
 }

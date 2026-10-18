@@ -8,3 +8,11 @@ artifacts/
 appsettings.local.json
 dotnet-install.ps1
 TestResults/
+.local-history/
+.private/
+.agents/
+.codex/
+AGENTS.*
+*.md
+!/README.md
+!/THIRD-PARTY-NOTICES.md

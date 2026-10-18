@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using EternalGG.Core;
 
 /** 검증 결과 집계 */
@@ -25,6 +26,33 @@ Assert(rankedSample.Games == 20 && rankedSample.Wins == 5 && rankedSample.WinRat
 Assert(rankedSample.MostPicks.Count == 3 && rankedSample.MostPicks[0].Character == "아디나" && rankedSample.MostPicks.Sum(p => p.Games) == 20, "most picks share the same sample with deterministic ties");
 Assert(RecentRanked.FromGames(rankedGames.Take(3)).Summary == "3경기 / 1승 2패", "small sample reports actual count");
 Assert(RecentRanked.FromGames([]).WinRate == "—", "empty ranked sample has no fabricated rate");
+
+/** 전체 캐릭터 코드와 언어 별칭 및 잘못된 코드 보호 검증 */
+Assert(CharacterCatalog.All.Count == 91 && CharacterCatalog.All.Select(c => c.Code).Distinct().Count() == 91, "complete unique character catalog");
+Assert(CharacterCatalog.Find(52)?.Name == "아디나" && CharacterCatalog.Find(91)?.Key == "Seres", "known and newest character codes");
+Assert(CharacterCatalog.Find(0, "Debi & Marlene")?.Code == 65 && CharacterCatalog.Find(0, "리다이린")?.Code == 10, "English and Korean character aliases");
+Assert(CharacterCatalog.Find(999, "아디나") == null && CharacterCatalog.Find(0, "../../outside") == null, "unknown code never borrows another portrait");
+var aliasSample = RecentRanked.FromGames([new("a", rankedTime, "Adina", 1), new("b", rankedTime.AddMinutes(-1), "아디나", 2, CharacterCode: 52)]);
+Assert(aliasSample.MostPicks.Count == 1 && aliasSample.MostPicks[0].Games == 2 && aliasSample.MostPicks[0].PortraitPath!.EndsWith("052-Adina.png"), "same character code merges aliases into one pick");
+Assert(new MostPick("알수없음", 1, 0, 999).PortraitPath == null, "unknown character keeps text fallback");
+
+/** 공식 응답 필드의 모스트 초상화 연결과 불완전 응답 구분 검증 */
+using var rankedResponse = JsonDocument.Parse("""[{"gameId":101,"matchingMode":3,"matchingTeamMode":3,"characterNum":52,"gameRank":1,"startDtm":"2026-10-18T12:00:00Z"},{"gameId":102,"matchingMode":2,"matchingTeamMode":3,"characterNum":31,"gameRank":1,"startDtm":"2026-10-18T13:00:00Z"}]""");
+var parsedRanked = RankedMatchParser.Parse(rankedResponse.RootElement);
+Assert(parsedRanked is { Games: 1, Wins: 1 } && parsedRanked.MostPicks[0].CharacterCode == 52 && parsedRanked.MostPicks[0].PortraitPath != null, "API characterNum resolves to a bundled portrait");
+using var missingRankedFields = JsonDocument.Parse("""[{"matchingMode":3,"characterNum":52}]""");
+Assert(RankedMatchParser.Parse(missingRankedFields.RootElement) == null, "incomplete match response never claims zero ranked games");
+using var noRankedGames = JsonDocument.Parse("[]");
+Assert(RankedMatchParser.Parse(noRankedGames.RootElement)?.Games == 0, "valid empty response remains different from missing data");
+
+/** 실제 API 어댑터 결과까지 이어지는 초상화 코드 검증 */
+var portraitHandler = new FakeHandler { GamesResponse = "{\"code\":200,\"userGames\":" + rankedResponse.RootElement.GetRawText() + "}" };
+using var portraitHttp = new HttpClient(portraitHandler);
+var portraitResult = await new EternalReturnApi(portraitHttp).LookupAsync("검증", "fixture", 33, 3, CancellationToken.None);
+Assert(portraitResult.Stats?.RecentRanked?.MostPicks[0].PortraitPath?.EndsWith("052-Adina.png") == true && portraitHandler.Calls == 3, "API lookup passes portrait codes without extra requests");
+portraitHandler.GamesResponse = "{\"code\":200,\"next\":123,\"userGames\":" + rankedResponse.RootElement.GetRawText() + "}";
+var partialPortraitResult = await new EternalReturnApi(portraitHttp).LookupAsync("검증", "fixture", 33, 3, CancellationToken.None);
+Assert(partialPortraitResult.Stats is { RecentRanked: null }, "incomplete page never masquerades as full recent sample");
 
 /** AI 매칭과 재진입 상태 검증 */
 var state = new MatchState();
@@ -165,6 +193,7 @@ sealed class FakeHandler : HttpMessageHandler
     public int Calls { get; private set; }
     public List<string> Paths { get; } = [];
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+    public string? GamesResponse { get; set; }
 
     /** 요청 경로 기록 및 테스트 응답 생성 */
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -175,7 +204,7 @@ sealed class FakeHandler : HttpMessageHandler
             ? """{"code":200,"user":{"uid":"testuid","nickname":"이하링"}}"""
             : request.RequestUri.AbsolutePath.Contains("stats")
                 ? """{"code":200,"userStats":[{"matchingTeamMode":3,"totalGames":20,"totalWins":4,"mmr":0,"averageRank":3.5}]}"""
-                : """{"code":200,"userGames":[{"seasonId":33,"matchingMode":2,"gameRank":2},{"seasonId":32,"matchingMode":3,"gameRank":1}]}""";
+                : GamesResponse ?? """{"code":200,"userGames":[{"seasonId":33,"matchingMode":2,"gameRank":2},{"seasonId":32,"matchingMode":3,"gameRank":1}]}""";
         return Task.FromResult(new HttpResponseMessage(Status) { Content = new StringContent(json, Encoding.UTF8, "application/json") });
     }
 }

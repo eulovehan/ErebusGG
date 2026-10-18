@@ -1,0 +1,82 @@
+[
+  {
+    "assetId": "1",
+    "name": "아이언",
+    "source": "https://cdn.dak.gg/er/images/tier/full/1.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "4a18f5b0e01b22cefe7abda4d14f5d70920213a7b36cfc571a6d691fd8f03fb2"
+  },
+  {
+    "assetId": "2",
+    "name": "브론즈",
+    "source": "https://cdn.dak.gg/er/images/tier/full/2.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "b63af8753ed07848e45606bd97ef698263b6f2525d37d2718dd360ef102d4c01"
+  },
+  {
+    "assetId": "3",
+    "name": "실버",
+    "source": "https://cdn.dak.gg/er/images/tier/full/3.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "879cc4faf92f79b239aeed3eb6f8311dc15d898c7ada3a2a2fb8b9dbd72c00d7"
+  },
+  {
+    "assetId": "4",
+    "name": "골드",
+    "source": "https://cdn.dak.gg/er/images/tier/full/4.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "ea00065dccd0d74b45f809f798bd17b0b029fd13f195c00e1ab0e1ee12686c1b"
+  },
+  {
+    "assetId": "5",
+    "name": "플래티넘",
+    "source": "https://cdn.dak.gg/er/images/tier/full/5.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "15651ce976dd8d730054837d41a680a4032133802a4347cd6b2831118cb89b04"
+  },
+  {
+    "assetId": "6",
+    "name": "다이아몬드",
+    "source": "https://cdn.dak.gg/er/images/tier/full/6.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "ce4625a6de3944a3d082d5acc35098c37a364a75f370d5a9eded538f384b0e11"
+  },
+  {
+    "assetId": "63",
+    "name": "메테오라이트",
+    "source": "https://cdn.dak.gg/er/images/tier/full/63.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "c5132bda82700b001118851bcf010270f095cbad0bddf230b7bf3d7aaff6214f"
+  },
+  {
+    "assetId": "66",
+    "name": "미스릴",
+    "source": "https://cdn.dak.gg/er/images/tier/full/66.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "be633828b1375de62731b5ba390b9afebf797ce41de542c395274cf0991bf659"
+  },
+  {
+    "assetId": "7",
+    "name": "데미갓",
+    "source": "https://cdn.dak.gg/er/images/tier/full/7.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "c067f158788ab6f3a25f2e227cd916aea27d93bf2ae1e68046b197056ecd5aab"
+  },
+  {
+    "assetId": "8",
+    "name": "이터니티",
+    "source": "https://cdn.dak.gg/er/images/tier/full/8.png",
+    "width": 290,
+    "height": 370,
+    "sha256": "a73b60bb44f8a856ef32021cca6224dc3147831b52e796bb214f26b33434ef76"
+  }
+]

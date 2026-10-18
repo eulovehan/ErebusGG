@@ -48,6 +48,16 @@ internal static class Program
             }
         }
 
+        /** 동봉된 전체 PNG의 디코드와 대체 표현 검증 */
+        var portraits = new EternalGG.App.Converters.PortraitConverter();
+        foreach (var character in CharacterCatalog.All)
+        {
+            var bitmap = portraits.Convert(character.Portrait, typeof(ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) as BitmapImage;
+            Assert(bitmap is { PixelWidth: > 0, PixelHeight: > 0 } && bitmap.IsFrozen, $"bundled portrait {character.Code}");
+        }
+        Assert(portraits.Convert("https://invalid.example/portrait.png", typeof(ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) == null, "portrait loader never fetches remote URLs");
+        Assert(portraits.Convert("Assets/Characters/missing.png", typeof(ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) == null, "missing portrait falls back without breaking layout");
+
         /** 최근 랭크 화면의 전체 및 소표본과 기록 없음 검증 */
         vm.NavigateCommand.Execute("match");
         vm.GameStatus = "예시 데이터 / 게임 연결 없음";
@@ -60,6 +70,7 @@ internal static class Program
         {
             Layout(root, width, 910);
             Audit(root, width);
+            Assert(Descendants(root).OfType<Image>().Count(i => Visible(i) && i.Source != null) == 6, "top three portraits loaded " + width);
             if (output != null) Render(root, Path.Combine(output, $"brand-team-{width}.png"), width, 910);
         }
         vm.Players[0].Apply(new(null, "잠시 후 다시 조회해 주세요"));
@@ -233,6 +244,39 @@ internal static class Program
         gradeCard.SetSuggestedName("자동승격", false, 0.96f);
         gradeCard.SetDetectedName("자동승격", 0.97f);
         Assert(gradeCard.Status == "전적 조회 대기" && !gradeCard.NeedsNameConfirmation, "automatic confirmation removes provisional guidance for unchanged text");
+        /** 티어 리소스와 미제공 기록의 표시 및 이름 변경 보호 검증 */
+        foreach (var tierId in RankTier.Names.Keys)
+        {
+            var tier = new RankTier(1, "검수 시즌", tierId, 2, 5000);
+            Assert(portraits.Convert(tier.PortraitPath!, typeof(ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) is BitmapImage { IsFrozen: true }, "bundled tier " + tierId);
+        }
+        Assert(new RankTier(1, "", 999).PortraitPath == null && new RankTier(1, "", 999).DisplayName == "티어 정보 없음", "unknown tier never invents an emblem");
+        Assert(new RankTier(1, "", 0, IsUnranked: true).DisplayName == "언랭크", "unranked differs from missing data");
+        Assert(new RankTier(1, "", 66, 1).DisplayName == "미스릴", "upper tiers have no fabricated division");
+        Assert(portraits.Convert("Assets/Tiers/../Characters/001-Jackie.png", typeof(ImageSource), null!, System.Globalization.CultureInfo.InvariantCulture) == null, "tier path traversal refused");
+        vm.NavigateCommand.Execute("match");
+        FillBrandFixture(vm, true);
+        foreach (var width in new[] { 832, 980, 1160, 1248 })
+        {
+            Layout(root, width, 910);
+            Audit(root, width);
+            Assert(Descendants(root).OfType<Image>().Count(i => Visible(i) && i.Source != null) == 10, "tier pair and most picks visible " + width);
+            if (output != null) Render(root, Path.Combine(output, $"erebus-team-{width}.png"), width, 910);
+        }
+        Assert(vm.Players[0].CurrentTier?.SeasonId != vm.Players[0].PreviousTier?.SeasonId, "current and previous seasons independent");
+        if (output != null)
+        {
+            vm.LatestNotice = "화면 예시 / 실제 플레이어 전적 아님";
+            vm.GameStatus = "예시 데이터 / 게임 연결 없음";
+            vm.PhaseTitle = "이번 팀을 확인하세요";
+            vm.NameMessage = "";
+            Layout(root, 1160, 1248);
+            Render(root, Path.Combine(output, "readme-team.png"), 1160, 1248);
+        }
+        vm.Players[0].Apply(new(null, "갱신 실패"));
+        Assert(vm.Players[0].CurrentTier != null && vm.Players[0].FetchedAt.StartsWith("이전 조회 결과"), "failed refresh preserves marked previous tier result");
+        vm.Players[0].Nickname = "티어초기화";
+        Assert(vm.Players[0].CurrentTier == null && vm.Players[0].PreviousTier == null, "name change clears both tier images");
         PresentationTraceSources.DataBindingSource.Flush();
         Assert(errors.ToString().Length == 0, "no runtime binding errors");
         window.Close();
@@ -342,27 +386,31 @@ internal static class Program
     private static void RunBrandPreview()
     {
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
-        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/EternalGG;component/Themes/Neutral.xaml", UriKind.Relative) });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/ErebusGG;component/Themes/Neutral.xaml", UriKind.Relative) });
         var vm = new MainViewModel { ApiKey = "", GameStatus = "예시 데이터 / 게임 연결 없음", PhaseTitle = "이번 팀을 확인하세요", LatestNotice = "브랜딩 검수용 화면" };
         vm.NavigateCommand.Execute("match");
-        FillBrandFixture(vm);
-        var window = new MainWindow(vm, false) { Title = "[브랜딩 검수] EternalGG / 게임 감시 없음" };
+        FillBrandFixture(vm, true);
+        var window = new MainWindow(vm, false) { Title = "[브랜딩 검수] Erebus GG / 게임 감시 없음" };
         app.Run(window);
     }
 
     /** 전체와 소표본 및 빈 결과의 독립 검수 데이터 */
-    private static void FillBrandFixture(MainViewModel vm)
+    private static void FillBrandFixture(MainViewModel vm, bool includeTiers = false)
     {
+        vm.Match.Reset();
         var nicknames = new[] { "별빛산책", "Sakura123", "星光GG7" };
         var characters = new[] { "아디나", "리오", "이바" };
         for (var slot = 0; slot < 3; slot++)
         {
             var card = vm.Players[slot];
             card.Reset();
+            card.HasSlot = true;
             card.SetDetectedName(nicknames[slot], 0.94f - slot * 0.2f);
             var length = slot == 0 ? 20 : slot == 1 ? 8 : 0;
             var games = Enumerable.Range(0, length).Select(i => new RankedMatch($"preview-{slot}-{i}", DateTimeOffset.Now.AddMinutes(-i * 30), characters[(i / 3) % 3], i % 4 == 0 ? 1 : 4));
-            card.Apply(new(new PlayerStats(card.Nickname, "preview-only", 80, 16, 2400, 3.6, "", DateTimeOffset.Now, RecentRanked.FromGames(games), "예시 시즌 / 랭크 스쿼드"), ""));
+            card.Apply(new(new PlayerStats(card.Nickname, "preview-only", 80, 16, 2400, 3.6, "", DateTimeOffset.Now, RecentRanked.FromGames(games), "예시 시즌 / 랭크 스쿼드",
+                CurrentTier: !includeTiers ? null : slot == 2 ? new(2, "예시 시즌 B", 0, IsUnranked: true) : new(2, "예시 시즌 B", slot == 0 ? 6 : 4, 2, slot == 0 ? 5700 : 3000),
+                PreviousTier: !includeTiers || slot == 2 ? null : new(1, "예시 시즌 A", slot == 0 ? 5 : 3, 1)), ""));
         }
     }
 
@@ -370,12 +418,12 @@ internal static class Program
     private static void RunAttentionPreview()
     {
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
-        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/EternalGG;component/Themes/Neutral.xaml", UriKind.Relative) });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/ErebusGG;component/Themes/Neutral.xaml", UriKind.Relative) });
         var vm = new MainViewModel { BringForward = true, GameStatus = "검수용 상태 / 실제 게임 조작 없음" };
-        var window = new MainWindow(vm, false) { Title = "[검수] EternalGG / 게임 감시 없음" };
+        var window = new MainWindow(vm, false) { Title = "[검수] Erebus GG / 게임 감시 없음" };
         var controls = new Window
         {
-            Title = "EternalGG / UI 검수 컨트롤", Width = 380, Height = 300,
+            Title = "Erebus GG / UI 검수 컨트롤", Width = 380, Height = 300,
             Background = (Brush)app.FindResource("BackgroundBrush"), Foreground = Brushes.White,
             WindowStartupLocation = WindowStartupLocation.CenterScreen
         };

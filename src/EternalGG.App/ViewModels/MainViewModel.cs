@@ -70,7 +70,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool CanTeamLookup => VisiblePlayers.Any(p => p.HasConfirmedName) && !IsLookupBusy;
     public bool CanSearch => !IsLookupBusy;
     public string LookupLabel => IsLookupBusy ? "불러오는 중…" : "전적 조회";
-    public string VersionLabel => $"EternalGG / v{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
+    public string VersionLabel => $"Erebus GG / v{typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
     private int queryVersion;
     public bool HelpOpen { get => CurrentPage == "help"; set { if (value) CurrentPage = "help"; else if (HelpOpen) CurrentPage = "match"; } }
     [ObservableProperty] private string settingsMessage = "";
@@ -88,7 +88,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         BringForward = Settings.BringForward;
         foreach (var player in Players)
             player.PropertyChanged += (_, args) => { if (args.PropertyName is nameof(PlayerCard.HasName) or nameof(PlayerCard.HasSlot) or nameof(PlayerCard.HasConfirmedName)) NotifyTeam(); };
-        AddEvent("EternalGG 시작");
+        AddEvent("Erebus GG 시작");
     }
 
     /** API 키 변경 안내 갱신 */

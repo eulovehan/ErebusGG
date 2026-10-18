@@ -1,11 +1,12 @@
-<Window x:Class="EternalGG.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="EternalGG / 이번 팀, 한눈에" Icon="Assets/eternalgg.ico" Width="1160" Height="910" MaxWidth="1248" MaxHeight="1248" MinWidth="980" MinHeight="760"
+<Window x:Class="EternalGG.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:converters="clr-namespace:EternalGG.App.Converters"
+        Title="Erebus GG" Icon="Assets/erebusgg.ico" Width="1160" Height="910" MaxWidth="1248" MaxHeight="1248" MinWidth="980" MinHeight="760"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
         FontFamily="Segoe UI, Malgun Gothic" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
+    <converters:PortraitConverter x:Key="Portrait" />
     <Style x:Key="PageHeading" TargetType="TextBlock">
       <Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,0,0,12" />
     </Style>
@@ -21,17 +22,37 @@
           </Border>
           <Button Content="이 이름이 맞아요" Command="{Binding ConfirmNameCommand}" Visibility="{Binding NeedsNameConfirmation, Converter={StaticResource Visible}}" AutomationProperties.Name="표시된 닉네임 확인" HorizontalAlignment="Left" Margin="0,0,0,12" />
           <Border Style="{StaticResource Divider}" Margin="0,4,0,16" />
+          <Grid Margin="0,0,0,16" MinHeight="128">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Text="현재 티어" Style="{StaticResource Caption}" />
+              <Image Source="{Binding CurrentTier.PortraitPath, Converter={StaticResource Portrait}}" Width="44" Height="56" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,4" AutomationProperties.Name="현재 티어 엠블럼"><Image.Style><Style TargetType="Image"><Style.Triggers><Trigger Property="Source" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers></Style></Image.Style></Image>
+              <TextBlock Text="{Binding CurrentTier.DisplayName, TargetNullValue=—, FallbackValue=—}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+              <TextBlock Text="{Binding CurrentTier.Detail, TargetNullValue='', FallbackValue=''}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="전 시즌 티어" Style="{StaticResource Caption}" />
+              <Image Source="{Binding PreviousTier.PortraitPath, Converter={StaticResource Portrait}}" Width="32" Height="40" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,4" AutomationProperties.Name="전 시즌 티어 엠블럼"><Image.Style><Style TargetType="Image"><Style.Triggers><Trigger Property="Source" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers></Style></Image.Style></Image>
+              <TextBlock Text="{Binding PreviousTier.DisplayName, TargetNullValue=—, FallbackValue=—}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+              <TextBlock Text="{Binding PreviousTier.Detail, TargetNullValue='', FallbackValue=''}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
           <TextBlock Text="최근 랭크 승률" Style="{StaticResource Caption}" />
           <TextBlock Text="{Binding RankedWinRate}" FontFamily="Segoe UI" FontSize="44" FontWeight="SemiBold" Margin="0,4,0,4" />
           <TextBlock Text="{Binding RankedSummary}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
-          <ProgressBar Value="{Binding RankedPercent}" Maximum="100" Height="3" BorderThickness="0" Background="{StaticResource SecondaryBrush}" Foreground="{StaticResource ForegroundBrush}" Margin="0,12,0,16" IsHitTestVisible="False" Focusable="False"><ProgressBar.Template><ControlTemplate TargetType="ProgressBar"><Grid Background="{TemplateBinding Background}"><Border x:Name="PART_Track" /><Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left" /></Grid></ControlTemplate></ProgressBar.Template></ProgressBar>
+          <ProgressBar Value="{Binding RankedPercent}" Maximum="100" Height="3" BorderThickness="0" Background="{StaticResource SecondaryBrush}" Foreground="{StaticResource AccentBrush}" Margin="0,12,0,16" IsHitTestVisible="False" Focusable="False"><ProgressBar.Template><ControlTemplate TargetType="ProgressBar"><Grid Background="{TemplateBinding Background}"><Border x:Name="PART_Track" /><Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left" /></Grid></ControlTemplate></ProgressBar.Template></ProgressBar>
           <Grid Margin="0,0,0,12"><TextBlock Text="모스트 3" FontWeight="SemiBold" /><TextBlock Text="경기 / 승률" Style="{StaticResource Caption}" HorizontalAlignment="Right" /></Grid>
           <ItemsControl ItemsSource="{Binding MostPicks}">
             <ItemsControl.ItemTemplate><DataTemplate>
               <Grid Margin="0,0,0,12">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="40" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Width="32" Height="36" Background="{StaticResource SecondaryBrush}" CornerRadius="6" HorizontalAlignment="Left"><TextBlock Text="{Binding Initial}" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" /></Border>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="{Binding Character}" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" Margin="0,3,0,0" /></StackPanel>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="48" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Width="40" Height="40" Background="{StaticResource SecondaryBrush}" CornerRadius="6" HorizontalAlignment="Left">
+                  <Grid><Grid.Clip><RectangleGeometry Rect="0,0,40,40" RadiusX="6" RadiusY="6" /></Grid.Clip>
+                    <TextBlock Text="{Binding Initial}" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" AutomationProperties.Name="초상화 없음"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding Source, ElementName=PickPortrait}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                    <Image x:Name="PickPortrait" Source="{Binding PortraitPath, Converter={StaticResource Portrait}}" Width="40" Height="40" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="{Binding DisplayName, StringFormat={}{0} 초상화}" />
+                  </Grid>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" Margin="0,3,0,0" /></StackPanel>
               </Grid>
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -65,7 +86,7 @@
       <Border x:Name="TitleBar" Grid.Row="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0" IsHitTestVisible="False"><Path Data="{StaticResource BrandGeometry}" Fill="{StaticResource ForegroundBrush}" Width="12" Height="14" Stretch="Uniform" /><TextBlock Text="eternalgg" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0" /></StackPanel>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0" IsHitTestVisible="False"><Path Data="{StaticResource BrandGeometry}" Fill="{StaticResource ForegroundBrush}" Width="12" Height="14" Stretch="Uniform" /><TextBlock Text="Erebus GG" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0" /></StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
             <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="MinimizeClick" ToolTip="최소화" AutomationProperties.Name="창 최소화">
               <Path Data="M 0,5 L 10,5" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}" StrokeThickness="1" Width="10" Height="10" />
@@ -110,34 +131,33 @@
               <Border Background="{StaticResource ForegroundBrush}" CornerRadius="7" Width="30" Height="30">
                 <Path Data="{StaticResource BrandGeometry}" Fill="#111111" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
-              <TextBlock Text="eternalgg" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0" />
+              <TextBlock Text="Erebus GG" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0" />
             </StackPanel>
-            <TextBlock Text="이번 팀, 한눈에" Style="{StaticResource Caption}" Margin="10,0,0,28" />
             <Button Content="현재 매칭" Command="{Binding NavigateCommand}" CommandParameter="match" AutomationProperties.Name="현재 매칭">
               <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}">
                 <Style.Triggers><DataTrigger Binding="{Binding MatchOpen}" Value="True">
-                  <Setter Property="Background" Value="{StaticResource SecondaryBrush}" /><Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
+                  <Setter Property="Background" Value="{StaticResource AccentSurfaceBrush}" /><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
                 </DataTrigger></Style.Triggers>
               </Style></Button.Style>
             </Button>
             <Button Content="전적 검색" Command="{Binding NavigateCommand}" CommandParameter="search" AutomationProperties.Name="전적 검색">
               <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}">
                 <Style.Triggers><DataTrigger Binding="{Binding SearchOpen}" Value="True">
-                  <Setter Property="Background" Value="{StaticResource SecondaryBrush}" /><Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
+                  <Setter Property="Background" Value="{StaticResource AccentSurfaceBrush}" /><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
                 </DataTrigger></Style.Triggers>
               </Style></Button.Style>
             </Button>
             <Button Content="설정" Command="{Binding NavigateCommand}" CommandParameter="settings" AutomationProperties.Name="설정">
               <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}">
                 <Style.Triggers><DataTrigger Binding="{Binding SettingsOpen}" Value="True">
-                  <Setter Property="Background" Value="{StaticResource SecondaryBrush}" /><Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
+                  <Setter Property="Background" Value="{StaticResource AccentSurfaceBrush}" /><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
                 </DataTrigger></Style.Triggers>
               </Style></Button.Style>
             </Button>
             <Button Content="사용 가이드" Command="{Binding NavigateCommand}" CommandParameter="help" AutomationProperties.Name="사용 가이드">
               <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavButton}">
                 <Style.Triggers><DataTrigger Binding="{Binding HelpOpen}" Value="True">
-                  <Setter Property="Background" Value="{StaticResource SecondaryBrush}" /><Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
+                  <Setter Property="Background" Value="{StaticResource AccentSurfaceBrush}" /><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
                 </DataTrigger></Style.Triggers>
               </Style></Button.Style>
             </Button>
@@ -244,7 +264,7 @@
             <StackPanel Visibility="{Binding HelpOpen, Converter={StaticResource Visible}}">
               <Border Style="{StaticResource Panel}" Padding="24" Margin="0,0,0,16">
                 <StackPanel>
-                  <TextBlock Text="이번 팀, 한눈에" Style="{StaticResource PageHeading}" />
+                  <TextBlock Text="사용 방법" Style="{StaticResource PageHeading}" />
                   <TextBlock Text="1. 이터널리턴을 실행하고 매칭을 시작하세요.&#10;2. 팀원 이름이 표시되는 동안 게임을 앞으로 두세요.&#10;3. 이름과 전적을 확인하세요. 잘못된 이름은 카드에서 수정할 수 있어요." TextWrapping="Wrap" LineHeight="28" />
                   <TextBlock Text="AI 상대 대전은 본인 1명만 확인합니다. 이름을 놓쳤다면 '이름 다시 확인'을 누르고, 게임 중에는 Tab 정보 화면을 열어 주세요." Style="{StaticResource Caption}" FontSize="13" TextWrapping="Wrap" LineHeight="23" Margin="0,20,0,0" />
                 </StackPanel>
@@ -253,7 +273,7 @@
                 <StackPanel>
                   <TextBlock Text="전적을 확인할 수 없을 때" Style="{StaticResource PageHeading}" />
                   <TextBlock Text="조회 서비스를 사용할 수 없으면 닉네임만 표시합니다. 재시도 안내가 나타나면 잠시 후 다시 조회해 주세요. 이전 조회 결과라는 표시가 있으면 갱신 전 기록입니다." TextWrapping="Wrap" LineHeight="24" />
-                  <TextBlock Text="최근 랭크 승률과 모스트 3은 동일한 최대 20경기 기준입니다. 1위를 승리로 집계하고, 20경기 미만이면 실제 경기 수를 표시합니다. 미제공 기록은 0%로 표시하지 않습니다. 시즌 전적은 별도로 펼쳐 확인할 수 있습니다." Style="{StaticResource Caption}" FontSize="13" TextWrapping="Wrap" LineHeight="23" Margin="0,16,0,0" />
+                  <TextBlock Text="최근 랭크 승률과 모스트 3은 조회 가능한 최근 90일 중 동일한 최대 20경기 기준입니다. 닉네임 변경 전 기록은 제외될 수 있습니다. 1위를 승리로 집계하고, 20경기 미만이면 실제 경기 수를 표시합니다. 미제공 기록은 0%로 표시하지 않습니다. 시즌 전적은 별도로 펼쳐 확인할 수 있습니다." Style="{StaticResource Caption}" FontSize="13" TextWrapping="Wrap" LineHeight="23" Margin="0,16,0,0" />
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource Panel}" Padding="24">
